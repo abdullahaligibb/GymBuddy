@@ -78,6 +78,11 @@ export function WeeklyCalendar({
                 : "kein Training"}
             </Text>
             <Text style={styles.metaText}>{item.type} · {item.intensity}</Text>
+            {item.exercises && item.exercises.length > 0 && (
+              <Text style={styles.templateMetaText}>
+                {item.exercises.length} Übungen aus Vorlage
+              </Text>
+            )}
 
             {item.muscles.length > 0 ? (
               <View>
@@ -190,6 +195,12 @@ const styles = StyleSheet.create({
   metaText: {
     color: "#8D9A95",
     fontSize: 13,
+    marginTop: 6,
+  },
+  templateMetaText: {
+    color: "#7CFF6B",
+    fontSize: 12,
+    fontWeight: "800",
     marginTop: 6,
   },
   chipWrap: {
