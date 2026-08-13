@@ -1,13 +1,26 @@
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 import { exercises } from "../data/exercises";
 import { workoutTemplates } from "../data/workoutTemplates";
+import { WorkoutTemplate } from "../types";
 
 const exerciseNames = new Map(
   exercises.map((exercise) => [exercise.id, exercise.name]),
 );
 
-export function WorkoutTemplateLibrary() {
+type WorkoutTemplateLibraryProps = {
+  onAdoptTemplate: (template: WorkoutTemplate) => void;
+};
+
+export function WorkoutTemplateLibrary({
+  onAdoptTemplate,
+}: WorkoutTemplateLibraryProps) {
   return (
     <ScrollView
       contentContainerStyle={styles.templateList}
@@ -60,6 +73,14 @@ export function WorkoutTemplateLibrary() {
               </View>
             ))}
           </View>
+
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => onAdoptTemplate(template)}
+            style={styles.adoptButton}
+          >
+            <Text style={styles.adoptButtonText}>Vorlage übernehmen</Text>
+          </TouchableOpacity>
         </View>
       ))}
     </ScrollView>
@@ -196,6 +217,19 @@ const styles = StyleSheet.create({
   exercisePrescription: {
     color: "#7CFF6B",
     fontSize: 12,
+    fontWeight: "900",
+  },
+  adoptButton: {
+    alignItems: "center",
+    backgroundColor: "#7CFF6B",
+    borderRadius: 8,
+    justifyContent: "center",
+    marginTop: 18,
+    minHeight: 46,
+  },
+  adoptButtonText: {
+    color: "#0B0F0E",
+    fontSize: 14,
     fontWeight: "900",
   },
 });

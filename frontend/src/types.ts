@@ -26,6 +26,8 @@ export type WorkoutDay = {
   intensity: WorkoutIntensity;
   status: WorkoutStatus;
   notes?: string;
+  sourceTemplateId?: string;
+  exercises?: WorkoutTemplateExercise[];
 };
 
 export type MuscleGroup =

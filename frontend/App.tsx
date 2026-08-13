@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Alert,
   Image,
   SafeAreaView,
   ScrollView,
@@ -11,11 +12,12 @@ import {
 } from "react-native";
 
 import { ExerciseLibrary } from "./src/components/ExerciseLibrary";
+import { TemplateAdoptionModal } from "./src/components/TemplateAdoptionModal";
 import { WorkoutTemplateLibrary } from "./src/components/WorkoutTemplateLibrary";
 import { WorkoutFormModal } from "./src/components/WorkoutFormModal";
 import { WeeklyCalendar } from "./src/components/WeeklyCalendar";
 import { initialWorkouts } from "./src/data/workouts";
-import { WorkoutDay } from "./src/types";
+import { WorkoutDay, WorkoutTemplate } from "./src/types";
 
 const gymBuddyLogo = require("./assets/logo-gymbuddy.png");
 
@@ -26,6 +28,9 @@ export default function App() {
   const [workouts, setWorkouts] = useState<WorkoutDay[]>(initialWorkouts);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<WorkoutDay | undefined>();
+  const [templateToAdopt, setTemplateToAdopt] = useState<
+    WorkoutTemplate | undefined
+  >();
 
   function openWorkoutForm(day?: WorkoutDay) {
     const fallbackDay =
@@ -68,9 +73,47 @@ export default function App() {
               intensity: "Leicht",
               status: "ruhe",
               notes: undefined,
+              sourceTemplateId: undefined,
+              exercises: undefined,
             }
           : item,
       ),
+    );
+  }
+
+  function adoptTemplate(dayId: string, time: string) {
+    if (!templateToAdopt) {
+      return;
+    }
+
+    const adoptedTemplate = templateToAdopt;
+    const selectedCalendarDay = workouts.find((workout) => workout.id === dayId);
+
+    setWorkouts((current) =>
+      current.map((workout) =>
+        workout.id === dayId
+          ? {
+              ...workout,
+              title: adoptedTemplate.name,
+              time,
+              durationMinutes: adoptedTemplate.durationMinutes,
+              type: adoptedTemplate.type,
+              muscles: [...adoptedTemplate.muscles],
+              intensity: adoptedTemplate.difficulty,
+              status: "geplant",
+              notes: `Ziel: ${adoptedTemplate.goal}`,
+              sourceTemplateId: adoptedTemplate.id,
+              exercises: adoptedTemplate.exercises.map((exercise) => ({
+                ...exercise,
+              })),
+            }
+          : workout,
+      ),
+    );
+    setTemplateToAdopt(undefined);
+    Alert.alert(
+      "Vorlage übernommen",
+      `${adoptedTemplate.name} wurde für ${selectedCalendarDay?.fullDay ?? "den gewählten Tag"} eingeplant.`,
     );
   }
 
@@ -154,7 +197,7 @@ export default function App() {
 
         <SectionTitle label="Trainingspläne" title="Workout-Vorlagen" />
 
-        <WorkoutTemplateLibrary />
+        <WorkoutTemplateLibrary onAdoptTemplate={setTemplateToAdopt} />
 
         <SectionTitle label="Übungen" title="Übungsbibliothek" />
 
@@ -182,6 +225,14 @@ export default function App() {
         visible={isFormOpen}
         onClose={closeWorkoutForm}
         onSubmit={saveWorkout}
+      />
+
+      <TemplateAdoptionModal
+        days={workouts}
+        onClose={() => setTemplateToAdopt(undefined)}
+        onSubmit={adoptTemplate}
+        template={templateToAdopt}
+        visible={Boolean(templateToAdopt)}
       />
     </SafeAreaView>
   );
