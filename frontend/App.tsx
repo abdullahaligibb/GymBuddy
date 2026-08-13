@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { ExerciseLibrary } from "./src/components/ExerciseLibrary";
+import { WorkoutTemplateLibrary } from "./src/components/WorkoutTemplateLibrary";
 import { WorkoutFormModal } from "./src/components/WorkoutFormModal";
 import { WeeklyCalendar } from "./src/components/WeeklyCalendar";
 import { initialWorkouts } from "./src/data/workouts";
@@ -150,6 +151,10 @@ export default function App() {
           onMarkDone={markWorkoutDone}
           onPlanDay={openWorkoutForm}
         />
+
+        <SectionTitle label="Trainingspläne" title="Workout-Vorlagen" />
+
+        <WorkoutTemplateLibrary />
 
         <SectionTitle label="Übungen" title="Übungsbibliothek" />
 

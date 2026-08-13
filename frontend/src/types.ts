@@ -62,3 +62,20 @@ export type Exercise = {
   commonMistake: string;
   safetyNote: string;
 };
+
+export type WorkoutTemplateExercise = {
+  exerciseId: Exercise["id"];
+  sets: number;
+  repetitions: string;
+};
+
+export type WorkoutTemplate = {
+  id: string;
+  name: string;
+  type: Exclude<WorkoutType, "Mobility" | "Rest Day">;
+  durationMinutes: number;
+  goal: string;
+  difficulty: WorkoutIntensity;
+  muscles: Array<MuscleGroup | "Cardio">;
+  exercises: WorkoutTemplateExercise[];
+};
