@@ -16,6 +16,7 @@ import { initialWorkouts } from "./src/data/workouts";
 import { WorkoutDay } from "./src/types";
 
 const tabs = ["Home", "Kalender", "Uebungen", "Stats"];
+const weeklyGoal = 3;
 
 export default function App() {
   const [workouts, setWorkouts] = useState<WorkoutDay[]>(initialWorkouts);
@@ -23,7 +24,9 @@ export default function App() {
   const [selectedDay, setSelectedDay] = useState<WorkoutDay | undefined>();
 
   function openWorkoutForm(day?: WorkoutDay) {
-    setSelectedDay(day);
+    const fallbackDay =
+      workouts.find((workout) => workout.muscles.length === 0) ?? workouts[0];
+    setSelectedDay(day ?? fallbackDay);
     setIsFormOpen(true);
   }
 
@@ -38,6 +41,46 @@ export default function App() {
     );
     closeWorkoutForm();
   }
+
+  function markWorkoutDone(workout: WorkoutDay) {
+    setWorkouts((current) =>
+      current.map((item) =>
+        item.id === workout.id ? { ...item, status: "erledigt" } : item,
+      ),
+    );
+  }
+
+  function deleteWorkout(workout: WorkoutDay) {
+    setWorkouts((current) =>
+      current.map((item) =>
+        item.id === workout.id
+          ? {
+              ...item,
+              title: "Noch kein Training",
+              time: "-",
+              durationMinutes: 0,
+              type: "Rest Day",
+              muscles: [],
+              intensity: "Leicht",
+              status: "ruhe",
+              notes: undefined,
+            }
+          : item,
+      ),
+    );
+  }
+
+  const completedWorkouts = workouts.filter(
+    (workout) => workout.status === "erledigt",
+  ).length;
+  const plannedWorkouts = workouts.filter(
+    (workout) => workout.status === "geplant",
+  ).length;
+  const totalTrainingTime = workouts
+    .filter((workout) => workout.status === "erledigt")
+    .reduce((sum, workout) => sum + workout.durationMinutes, 0);
+  const progressPercent = Math.min((completedWorkouts / weeklyGoal) * 100, 100);
+  const progressWidth = `${progressPercent}%` as `${number}%`;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -60,14 +103,18 @@ export default function App() {
           <Text style={styles.eyebrow}>Heute</Text>
           <Text style={styles.title}>Hey Arion, Regeneration zaehlt auch.</Text>
           <Text style={styles.bodyText}>
-            Heute ist kein hartes Training geplant. Freitag steht Leg Day an.
+            {plannedWorkouts > 0
+              ? `Noch ${plannedWorkouts} Training(s) sind diese Woche geplant.`
+              : "Diese Woche ist alles erledigt oder frei geplant."}
           </Text>
           <View style={styles.progressRow}>
             <Text style={styles.bodyText}>Wochenziel</Text>
-            <Text style={styles.metricText}>2 / 3</Text>
+            <Text style={styles.metricText}>
+              {completedWorkouts} / {weeklyGoal}
+            </Text>
           </View>
           <View style={styles.progressTrack}>
-            <View style={styles.progressFill} />
+            <View style={[styles.progressFill, { width: progressWidth }]} />
           </View>
         </View>
 
@@ -78,17 +125,21 @@ export default function App() {
             <Text style={styles.bodyText}>Wochen am Stueck</Text>
           </View>
           <View style={styles.smallPanel}>
-            <Text style={styles.eyebrow}>Buddy</Text>
-            <View style={styles.petOrb}>
-              <Text style={styles.petLetter}>L</Text>
-            </View>
-            <Text style={styles.bodyText}>Lumo Stufe 3</Text>
+            <Text style={styles.eyebrow}>Trainingszeit</Text>
+            <Text style={styles.bigNumber}>{totalTrainingTime}</Text>
+            <Text style={styles.bodyText}>Minuten erledigt</Text>
           </View>
         </View>
 
         <SectionTitle label="Wochenkalender" title="Geplante Gym-Woche" />
 
-        <WeeklyCalendar workouts={workouts} onPlanDay={openWorkoutForm} />
+        <WeeklyCalendar
+          workouts={workouts}
+          onDeleteWorkout={deleteWorkout}
+          onEditWorkout={openWorkoutForm}
+          onMarkDone={markWorkoutDone}
+          onPlanDay={openWorkoutForm}
+        />
 
         <SectionTitle label="Uebungen" title="Basis-Uebungen" />
 
@@ -229,7 +280,6 @@ const styles = StyleSheet.create({
   progressFill: {
     backgroundColor: "#7CFF6B",
     height: "100%",
-    width: "66%",
   },
   twoColumn: {
     flexDirection: "row",

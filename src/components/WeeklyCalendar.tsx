@@ -5,6 +5,9 @@ import { WorkoutDay, WorkoutStatus } from "../types";
 type WeeklyCalendarProps = {
   workouts: WorkoutDay[];
   onPlanDay?: (workout: WorkoutDay) => void;
+  onEditWorkout?: (workout: WorkoutDay) => void;
+  onMarkDone?: (workout: WorkoutDay) => void;
+  onDeleteWorkout?: (workout: WorkoutDay) => void;
 };
 
 function getStatusStyle(status: WorkoutStatus) {
@@ -39,7 +42,13 @@ function getStatusLabel(status: WorkoutStatus) {
   return "Ruhetag";
 }
 
-export function WeeklyCalendar({ workouts, onPlanDay }: WeeklyCalendarProps) {
+export function WeeklyCalendar({
+  workouts,
+  onPlanDay,
+  onEditWorkout,
+  onMarkDone,
+  onDeleteWorkout,
+}: WeeklyCalendarProps) {
   return (
     <ScrollView
       horizontal
@@ -71,12 +80,37 @@ export function WeeklyCalendar({ workouts, onPlanDay }: WeeklyCalendarProps) {
             <Text style={styles.metaText}>{item.type} · {item.intensity}</Text>
 
             {item.muscles.length > 0 ? (
-              <View style={styles.chipWrap}>
-                {item.muscles.map((muscle) => (
-                  <Text style={styles.chip} key={muscle}>
-                    {muscle}
-                  </Text>
-                ))}
+              <View>
+                <View style={styles.chipWrap}>
+                  {item.muscles.map((muscle) => (
+                    <Text style={styles.chip} key={muscle}>
+                      {muscle}
+                    </Text>
+                  ))}
+                </View>
+                <View style={styles.actionRow}>
+                  <TouchableOpacity
+                    style={styles.secondaryAction}
+                    onPress={() => onEditWorkout?.(item)}
+                  >
+                    <Text style={styles.secondaryActionText}>Bearbeiten</Text>
+                  </TouchableOpacity>
+
+                  {item.status !== "erledigt" && (
+                    <TouchableOpacity
+                      style={styles.doneAction}
+                      onPress={() => onMarkDone?.(item)}
+                    >
+                      <Text style={styles.doneActionText}>Erledigt</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <TouchableOpacity
+                  style={styles.deleteAction}
+                  onPress={() => onDeleteWorkout?.(item)}
+                >
+                  <Text style={styles.deleteActionText}>Training loeschen</Text>
+                </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity
@@ -172,6 +206,51 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     paddingHorizontal: 9,
     paddingVertical: 6,
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 16,
+  },
+  secondaryAction: {
+    alignItems: "center",
+    backgroundColor: "#18201E",
+    borderRadius: 8,
+    flex: 1,
+    minHeight: 42,
+    justifyContent: "center",
+  },
+  secondaryActionText: {
+    color: "#DCE5E1",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  doneAction: {
+    alignItems: "center",
+    backgroundColor: "#7CFF6B",
+    borderRadius: 8,
+    flex: 1,
+    minHeight: 42,
+    justifyContent: "center",
+  },
+  doneActionText: {
+    color: "#0B0F0E",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  deleteAction: {
+    alignItems: "center",
+    borderColor: "rgba(255,90,95,0.38)",
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 8,
+    minHeight: 40,
+    justifyContent: "center",
+  },
+  deleteActionText: {
+    color: "#FF9A9D",
+    fontSize: 12,
+    fontWeight: "900",
   },
   planButton: {
     alignItems: "center",
