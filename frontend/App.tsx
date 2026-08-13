@@ -10,9 +10,9 @@ import {
   View,
 } from "react-native";
 
+import { ExerciseLibrary } from "./src/components/ExerciseLibrary";
 import { WorkoutFormModal } from "./src/components/WorkoutFormModal";
 import { WeeklyCalendar } from "./src/components/WeeklyCalendar";
-import { exercises } from "./src/data/exercises";
 import { initialWorkouts } from "./src/data/workouts";
 import { WorkoutDay } from "./src/types";
 
@@ -151,21 +151,9 @@ export default function App() {
           onPlanDay={openWorkoutForm}
         />
 
-        <SectionTitle label="Übungen" title="Basis-Übungen" />
+        <SectionTitle label="Übungen" title="Übungsbibliothek" />
 
-        <View style={styles.exerciseList}>
-          {exercises.map((exercise) => (
-            <View style={styles.exerciseCard} key={exercise.name}>
-              <View>
-                <Text style={styles.cardTitle}>{exercise.name}</Text>
-                <Text style={styles.bodyText}>
-                  {exercise.equipment} - {exercise.level}
-                </Text>
-              </View>
-              <Text style={styles.exerciseMuscle}>{exercise.muscle}</Text>
-            </View>
-          ))}
-        </View>
+        <ExerciseLibrary />
       </ScrollView>
 
       <View style={styles.bottomNav}>
@@ -340,35 +328,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: 12,
     marginTop: 28,
-  },
-  cardTitle: {
-    color: "#F4F7F5",
-    fontSize: 17,
-    fontWeight: "900",
-    marginBottom: 7,
-  },
-  exerciseList: {
-    gap: 10,
-  },
-  exerciseCard: {
-    alignItems: "center",
-    backgroundColor: "#111716",
-    borderColor: "rgba(255,255,255,0.08)",
-    borderRadius: 8,
-    borderWidth: 1,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    padding: 16,
-  },
-  exerciseMuscle: {
-    backgroundColor: "#18201E",
-    borderRadius: 999,
-    color: "#7CFF6B",
-    fontSize: 12,
-    fontWeight: "800",
-    overflow: "hidden",
-    paddingHorizontal: 10,
-    paddingVertical: 7,
   },
   bottomNav: {
     backgroundColor: "#111716",
