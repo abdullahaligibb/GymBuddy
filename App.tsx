@@ -8,104 +8,11 @@ import {
   View,
 } from "react-native";
 
-type WorkoutStatus = "erledigt" | "geplant" | "ruhe";
-
-type WorkoutDay = {
-  day: string;
-  date: string;
-  title: string;
-  time: string;
-  duration: string;
-  muscles: string[];
-  status: WorkoutStatus;
-};
-
-type Exercise = {
-  name: string;
-  muscle: string;
-  equipment: string;
-  level: string;
-};
-
-const week: WorkoutDay[] = [
-  {
-    day: "Mo",
-    date: "10.08.",
-    title: "Push Day",
-    time: "18:30",
-    duration: "75 min",
-    muscles: ["Brust", "Schulter", "Trizeps"],
-    status: "erledigt",
-  },
-  {
-    day: "Di",
-    date: "11.08.",
-    title: "Ruhetag",
-    time: "-",
-    duration: "Mobility optional",
-    muscles: ["Regeneration"],
-    status: "ruhe",
-  },
-  {
-    day: "Mi",
-    date: "12.08.",
-    title: "Pull Day",
-    time: "19:00",
-    duration: "70 min",
-    muscles: ["Ruecken", "Bizeps"],
-    status: "geplant",
-  },
-  {
-    day: "Fr",
-    date: "14.08.",
-    title: "Leg Day",
-    time: "18:00",
-    duration: "80 min",
-    muscles: ["Beine", "Waden"],
-    status: "geplant",
-  },
-];
-
-const exercises: Exercise[] = [
-  {
-    name: "Bankdruecken",
-    muscle: "Brust",
-    equipment: "Langhantel",
-    level: "Mittel",
-  },
-  {
-    name: "Latziehen",
-    muscle: "Ruecken",
-    equipment: "Kabelzug",
-    level: "Einsteiger",
-  },
-  {
-    name: "Kniebeugen",
-    muscle: "Beine",
-    equipment: "Langhantel",
-    level: "Fortgeschritten",
-  },
-  {
-    name: "Seitheben",
-    muscle: "Schulter",
-    equipment: "Kurzhanteln",
-    level: "Einsteiger",
-  },
-];
+import { WeeklyCalendar } from "./src/components/WeeklyCalendar";
+import { exercises } from "./src/data/exercises";
+import { initialWorkouts } from "./src/data/workouts";
 
 const tabs = ["Home", "Kalender", "Uebungen", "Stats"];
-
-function getStatusStyle(status: WorkoutStatus) {
-  if (status === "erledigt") {
-    return styles.doneCard;
-  }
-
-  if (status === "geplant") {
-    return styles.plannedCard;
-  }
-
-  return styles.restCard;
-}
 
 export default function App() {
   return (
@@ -157,34 +64,7 @@ export default function App() {
 
         <SectionTitle label="Wochenkalender" title="Geplante Gym-Woche" />
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.weekRow}
-        >
-          {week.map((item) => (
-            <View
-              key={`${item.day}-${item.title}`}
-              style={[styles.dayCard, getStatusStyle(item.status)]}
-            >
-              <View style={styles.dayHeader}>
-                <Text style={styles.dayText}>{item.day}</Text>
-                <Text style={styles.mutedText}>{item.date}</Text>
-              </View>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.bodyText}>
-                {item.time} - {item.duration}
-              </Text>
-              <View style={styles.chipWrap}>
-                {item.muscles.map((muscle) => (
-                  <Text style={styles.chip} key={muscle}>
-                    {muscle}
-                  </Text>
-                ))}
-              </View>
-            </View>
-          ))}
-        </ScrollView>
+        <WeeklyCalendar workouts={initialWorkouts} />
 
         <SectionTitle label="Uebungen" title="Basis-Uebungen" />
 
@@ -357,59 +237,11 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginTop: 28,
   },
-  weekRow: {
-    gap: 12,
-    paddingRight: 20,
-  },
-  dayCard: {
-    backgroundColor: "#111716",
-    borderRadius: 8,
-    borderWidth: 1,
-    minHeight: 188,
-    padding: 16,
-    width: 214,
-  },
-  doneCard: {
-    borderColor: "rgba(124,255,107,0.42)",
-  },
-  plannedCard: {
-    borderColor: "rgba(68,215,255,0.34)",
-  },
-  restCard: {
-    borderColor: "rgba(255,255,255,0.08)",
-    opacity: 0.78,
-  },
-  dayHeader: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 18,
-  },
-  dayText: {
-    color: "#F4F7F5",
-    fontSize: 18,
-    fontWeight: "900",
-  },
   cardTitle: {
     color: "#F4F7F5",
     fontSize: 17,
     fontWeight: "900",
     marginBottom: 7,
-  },
-  chipWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 7,
-    marginTop: 16,
-  },
-  chip: {
-    backgroundColor: "#25302D",
-    borderRadius: 999,
-    color: "#DCE5E1",
-    fontSize: 12,
-    overflow: "hidden",
-    paddingHorizontal: 9,
-    paddingVertical: 6,
   },
   exerciseList: {
     gap: 10,
