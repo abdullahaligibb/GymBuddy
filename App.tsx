@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -8,13 +9,36 @@ import {
   View,
 } from "react-native";
 
+import { WorkoutFormModal } from "./src/components/WorkoutFormModal";
 import { WeeklyCalendar } from "./src/components/WeeklyCalendar";
 import { exercises } from "./src/data/exercises";
 import { initialWorkouts } from "./src/data/workouts";
+import { WorkoutDay } from "./src/types";
 
 const tabs = ["Home", "Kalender", "Uebungen", "Stats"];
 
 export default function App() {
+  const [workouts, setWorkouts] = useState<WorkoutDay[]>(initialWorkouts);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<WorkoutDay | undefined>();
+
+  function openWorkoutForm(day?: WorkoutDay) {
+    setSelectedDay(day);
+    setIsFormOpen(true);
+  }
+
+  function closeWorkoutForm() {
+    setIsFormOpen(false);
+    setSelectedDay(undefined);
+  }
+
+  function saveWorkout(workout: WorkoutDay) {
+    setWorkouts((current) =>
+      current.map((item) => (item.id === workout.id ? workout : item)),
+    );
+    closeWorkoutForm();
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" />
@@ -27,7 +51,7 @@ export default function App() {
             <Text style={styles.brand}>Gym Buddy</Text>
             <Text style={styles.mutedText}>Donnerstag, 13. August</Text>
           </View>
-          <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity style={styles.addButton} onPress={() => openWorkoutForm()}>
             <Text style={styles.addButtonText}>+ Training</Text>
           </TouchableOpacity>
         </View>
@@ -64,7 +88,7 @@ export default function App() {
 
         <SectionTitle label="Wochenkalender" title="Geplante Gym-Woche" />
 
-        <WeeklyCalendar workouts={initialWorkouts} />
+        <WeeklyCalendar workouts={workouts} onPlanDay={openWorkoutForm} />
 
         <SectionTitle label="Uebungen" title="Basis-Uebungen" />
 
@@ -97,6 +121,14 @@ export default function App() {
           </TouchableOpacity>
         ))}
       </View>
+
+      <WorkoutFormModal
+        dayTemplates={workouts}
+        selectedDay={selectedDay}
+        visible={isFormOpen}
+        onClose={closeWorkoutForm}
+        onSubmit={saveWorkout}
+      />
     </SafeAreaView>
   );
 }
