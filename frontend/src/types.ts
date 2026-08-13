@@ -28,9 +28,37 @@ export type WorkoutDay = {
   notes?: string;
 };
 
+export type MuscleGroup =
+  | "Bauch"
+  | "Beine"
+  | "Bizeps"
+  | "Brust"
+  | "Ganzkörper"
+  | "Gesäß"
+  | "Rücken"
+  | "Schulter"
+  | "Trizeps"
+  | "Waden";
+
+export type ExerciseEquipment =
+  | "Eigengewicht"
+  | "Kabelzug"
+  | "Kettlebell"
+  | "Kurzhanteln"
+  | "Langhantel"
+  | "Maschine";
+
+export type ExerciseDifficulty = "Einsteiger" | "Mittel" | "Fortgeschritten";
+
 export type Exercise = {
+  id: string;
   name: string;
-  muscle: string;
-  equipment: string;
-  level: string;
+  muscle: MuscleGroup;
+  equipment: ExerciseEquipment;
+  level: ExerciseDifficulty;
+  description: string;
+  recommendedSets: number;
+  recommendedRepetitions: string;
+  commonMistake: string;
+  safetyNote: string;
 };
