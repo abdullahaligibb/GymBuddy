@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -14,6 +15,8 @@ import { WeeklyCalendar } from "./src/components/WeeklyCalendar";
 import { exercises } from "./src/data/exercises";
 import { initialWorkouts } from "./src/data/workouts";
 import { WorkoutDay } from "./src/types";
+
+const gymBuddyLogo = require("./assets/logo-gymbuddy.png");
 
 const tabs = ["Home", "Kalender", "Übungen", "Stats"];
 const weeklyGoal = 3;
@@ -90,9 +93,16 @@ export default function App() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View>
-            <Text style={styles.brand}>Gym Buddy</Text>
-            <Text style={styles.mutedText}>Donnerstag, 13. August</Text>
+          <View style={styles.brandRow}>
+            <Image
+              source={gymBuddyLogo}
+              resizeMode="contain"
+              style={styles.logo}
+            />
+            <View>
+              <Text style={styles.brand}>Gym Buddy</Text>
+              <Text style={styles.mutedText}>Donnerstag, 13. August</Text>
+            </View>
           </View>
           <TouchableOpacity style={styles.addButton} onPress={() => openWorkoutForm()}>
             <Text style={styles.addButtonText}>+ Training</Text>
@@ -208,9 +218,21 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 20,
   },
+  brandRow: {
+    alignItems: "center",
+    flex: 1,
+    flexDirection: "row",
+    gap: 11,
+    minWidth: 0,
+  },
+  logo: {
+    borderRadius: 10,
+    height: 46,
+    width: 46,
+  },
   brand: {
     color: "#F4F7F5",
-    fontSize: 27,
+    fontSize: 25,
     fontWeight: "900",
   },
   addButton: {

@@ -5,14 +5,18 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/logo-gymbuddy.png",
         "backgroundColor": "#0B0F0E"
       }
-    }
+    },
+    "icon": "./assets/logo-gymbuddy.png"
   }
 }
