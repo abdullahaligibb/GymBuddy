@@ -15,7 +15,7 @@ import { exercises } from "./src/data/exercises";
 import { initialWorkouts } from "./src/data/workouts";
 import { WorkoutDay } from "./src/types";
 
-const tabs = ["Home", "Kalender", "Uebungen", "Stats"];
+const tabs = ["Home", "Kalender", "Übungen", "Stats"];
 const weeklyGoal = 3;
 
 export default function App() {
@@ -101,7 +101,7 @@ export default function App() {
 
         <View style={styles.heroPanel}>
           <Text style={styles.eyebrow}>Heute</Text>
-          <Text style={styles.title}>Hey Arion, Regeneration zaehlt auch.</Text>
+          <Text style={styles.title}>Hey Arion, Regeneration zählt auch.</Text>
           <Text style={styles.bodyText}>
             {plannedWorkouts > 0
               ? `Noch ${plannedWorkouts} Training(s) sind diese Woche geplant.`
@@ -122,7 +122,7 @@ export default function App() {
           <View style={styles.smallPanel}>
             <Text style={styles.eyebrow}>Streak</Text>
             <Text style={styles.bigNumber}>4</Text>
-            <Text style={styles.bodyText}>Wochen am Stueck</Text>
+            <Text style={styles.bodyText}>Wochen am Stück</Text>
           </View>
           <View style={styles.smallPanel}>
             <Text style={styles.eyebrow}>Trainingszeit</Text>
@@ -141,7 +141,7 @@ export default function App() {
           onPlanDay={openWorkoutForm}
         />
 
-        <SectionTitle label="Uebungen" title="Basis-Uebungen" />
+        <SectionTitle label="Übungen" title="Basis-Übungen" />
 
         <View style={styles.exerciseList}>
           {exercises.map((exercise) => (

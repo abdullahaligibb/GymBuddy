@@ -109,7 +109,7 @@ export function WeeklyCalendar({
                   style={styles.deleteAction}
                   onPress={() => onDeleteWorkout?.(item)}
                 >
-                  <Text style={styles.deleteActionText}>Training loeschen</Text>
+                  <Text style={styles.deleteActionText}>Training löschen</Text>
                 </TouchableOpacity>
               </View>
             ) : (

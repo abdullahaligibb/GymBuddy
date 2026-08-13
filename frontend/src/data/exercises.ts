@@ -2,14 +2,14 @@ import { Exercise } from "../types";
 
 export const exercises: Exercise[] = [
   {
-    name: "Bankdruecken",
+    name: "Bankdrücken",
     muscle: "Brust",
     equipment: "Langhantel",
     level: "Mittel",
   },
   {
     name: "Latziehen",
-    muscle: "Ruecken",
+    muscle: "Rücken",
     equipment: "Kabelzug",
     level: "Einsteiger",
   },

@@ -36,7 +36,7 @@ const intensityOptions: WorkoutIntensity[] = ["Leicht", "Mittel", "Schwer"];
 
 const muscleOptions = [
   "Brust",
-  "Ruecken",
+  "Rücken",
   "Beine",
   "Schulter",
   "Bizeps",
@@ -101,7 +101,7 @@ export function WorkoutFormModal({
       time: time.trim() || "18:00",
       durationMinutes: Number.isFinite(cleanDuration) ? cleanDuration : 60,
       type,
-      muscles: muscles.length > 0 ? muscles : ["Ganzkoerper"],
+      muscles: muscles.length > 0 ? muscles : ["Ganzkörper"],
       intensity,
       status: "geplant",
       notes: notes.trim(),
@@ -191,7 +191,7 @@ export function WorkoutFormModal({
               ))}
             </View>
 
-            <FieldLabel label="Intensitaet" />
+            <FieldLabel label="Intensität" />
             <View style={styles.optionRow}>
               {intensityOptions.map((option) => (
                 <SelectableChip
