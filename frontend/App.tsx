@@ -16,13 +16,21 @@ import { TemplateAdoptionModal } from "./src/components/TemplateAdoptionModal";
 import { WorkoutTemplateLibrary } from "./src/components/WorkoutTemplateLibrary";
 import { WorkoutFormModal } from "./src/components/WorkoutFormModal";
 import { WeeklyCalendar } from "./src/components/WeeklyCalendar";
+import { nutritionTips } from "./src/data/nutritionTips";
+import { demoTodayIso, demoUser, initialStreak } from "./src/data/profile";
 import { initialWorkouts } from "./src/data/workouts";
 import { WorkoutDay, WorkoutTemplate } from "./src/types";
+import {
+  calculateWorkoutWeekStats,
+  formatGermanDate,
+  parseDemoDate,
+} from "./src/utils/workoutStats";
 
 const gymBuddyLogo = require("./assets/logo-gymbuddy.png");
 
 const tabs = ["Home", "Kalender", "Übungen", "Stats"];
-const weeklyGoal = 3;
+const demoToday = parseDemoDate(demoTodayIso);
+const nutritionTip = nutritionTips[0];
 
 export default function App() {
   const [workouts, setWorkouts] = useState<WorkoutDay[]>(initialWorkouts);
@@ -117,17 +125,16 @@ export default function App() {
     );
   }
 
-  const completedWorkouts = workouts.filter(
-    (workout) => workout.status === "erledigt",
-  ).length;
-  const plannedWorkouts = workouts.filter(
-    (workout) => workout.status === "geplant",
-  ).length;
-  const totalTrainingTime = workouts
-    .filter((workout) => workout.status === "erledigt")
-    .reduce((sum, workout) => sum + workout.durationMinutes, 0);
-  const progressPercent = Math.min((completedWorkouts / weeklyGoal) * 100, 100);
-  const progressWidth = `${progressPercent}%` as `${number}%`;
+  const weekStats = calculateWorkoutWeekStats(
+    workouts,
+    demoUser,
+    initialStreak.longestWeeks,
+    demoToday,
+  );
+  const progressWidth = `${weekStats.weeklyGoalPercent}%` as `${number}%`;
+  const nextWorkoutLabel = weekStats.nextWorkout
+    ? `${weekStats.nextWorkout.fullDay}, ${weekStats.nextWorkout.time} - ${weekStats.nextWorkout.title}`
+    : "Kein weiteres Training geplant";
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -145,7 +152,7 @@ export default function App() {
             />
             <View>
               <Text style={styles.brand}>Gym Buddy</Text>
-              <Text style={styles.mutedText}>Donnerstag, 13. August</Text>
+              <Text style={styles.mutedText}>{formatGermanDate(demoToday)}</Text>
             </View>
           </View>
           <TouchableOpacity style={styles.addButton} onPress={() => openWorkoutForm()}>
@@ -155,16 +162,15 @@ export default function App() {
 
         <View style={styles.heroPanel}>
           <Text style={styles.eyebrow}>Heute</Text>
-          <Text style={styles.title}>Hey Arion, Regeneration zählt auch.</Text>
+          <Text style={styles.title}>Hey {demoUser.name}, dein Aufbau läuft.</Text>
           <Text style={styles.bodyText}>
-            {plannedWorkouts > 0
-              ? `Noch ${plannedWorkouts} Training(s) sind diese Woche geplant.`
-              : "Diese Woche ist alles erledigt oder frei geplant."}
+            {demoUser.goal} · {demoUser.experienceLevel} · {demoUser.split}
           </Text>
+          <Text style={styles.nextWorkoutText}>Nächstes Training: {nextWorkoutLabel}</Text>
           <View style={styles.progressRow}>
             <Text style={styles.bodyText}>Wochenziel</Text>
             <Text style={styles.metricText}>
-              {completedWorkouts} / {weeklyGoal}
+              {weekStats.completedWorkouts} / {demoUser.weeklyWorkoutGoal}
             </Text>
           </View>
           <View style={styles.progressTrack}>
@@ -175,14 +181,27 @@ export default function App() {
         <View style={styles.twoColumn}>
           <View style={styles.smallPanel}>
             <Text style={styles.eyebrow}>Streak</Text>
-            <Text style={styles.bigNumber}>4</Text>
-            <Text style={styles.bodyText}>Wochen am Stück</Text>
+            <Text style={styles.bigNumber}>
+              {weekStats.currentStreak.currentTrainingDays}
+            </Text>
+            <Text style={styles.bodyText}>Trainings in Folge</Text>
           </View>
           <View style={styles.smallPanel}>
             <Text style={styles.eyebrow}>Trainingszeit</Text>
-            <Text style={styles.bigNumber}>{totalTrainingTime}</Text>
+            <Text style={styles.bigNumber}>{weekStats.totalTrainingTime}</Text>
             <Text style={styles.bodyText}>Minuten erledigt</Text>
           </View>
+        </View>
+
+        <View style={styles.profilePanel}>
+          <Text style={styles.eyebrow}>Diese Woche</Text>
+          <Text style={styles.sectionHeading}>
+            {weekStats.trainingsThisWeek} Trainings geplant
+          </Text>
+          <Text style={styles.bodyText}>
+            {weekStats.completedWorkouts} erledigt · längster Streak:{" "}
+            {weekStats.currentStreak.longestWeeks} Wochen
+          </Text>
         </View>
 
         <SectionTitle label="Wochenkalender" title="Geplante Gym-Woche" />
@@ -202,6 +221,14 @@ export default function App() {
         <SectionTitle label="Übungen" title="Übungsbibliothek" />
 
         <ExerciseLibrary />
+
+        <SectionTitle label="Ernährung" title="Tipp für Muskelaufbau" />
+
+        <View style={styles.profilePanel}>
+          <Text style={styles.eyebrow}>{nutritionTip.category}</Text>
+          <Text style={styles.sectionHeading}>{nutritionTip.title}</Text>
+          <Text style={styles.bodyText}>{nutritionTip.body}</Text>
+        </View>
       </ScrollView>
 
       <View style={styles.bottomNav}>
@@ -321,6 +348,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  nextWorkoutText: {
+    color: "#DCE5E1",
+    fontSize: 14,
+    fontWeight: "800",
+    lineHeight: 20,
+    marginTop: 10,
+  },
   mutedText: {
     color: "#8D9A95",
     fontSize: 13,
@@ -359,6 +393,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flex: 1,
     minHeight: 136,
+    padding: 16,
+  },
+  profilePanel: {
+    backgroundColor: "#111716",
+    borderColor: "rgba(255,255,255,0.08)",
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 7,
+    marginTop: 12,
     padding: 16,
   },
   bigNumber: {
