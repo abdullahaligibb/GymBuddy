@@ -1,5 +1,29 @@
 export type WorkoutStatus = "erledigt" | "geplant" | "verpasst" | "ruhe";
 
+export type TrainingGoal =
+  | "Muskelaufbau"
+  | "Kraftaufbau"
+  | "Fettabbau"
+  | "Allgemeine Fitness";
+
+export type ExperienceLevel = "Einsteiger" | "Mittel" | "Fortgeschritten";
+
+export type WorkoutSplit =
+  | "Push/Pull/Legs"
+  | "Upper/Lower"
+  | "Full Body"
+  | "Individuell";
+
+export type User = {
+  id: string;
+  name: string;
+  goal: TrainingGoal;
+  experienceLevel: ExperienceLevel;
+  weeklyWorkoutGoal: number;
+  split: WorkoutSplit;
+  preferredTrainingDays: string[];
+};
+
 export type WorkoutType =
   | "Push"
   | "Pull"
@@ -13,23 +37,6 @@ export type WorkoutType =
 
 export type WorkoutIntensity = "Leicht" | "Mittel" | "Schwer";
 
-export type WorkoutDay = {
-  id: string;
-  day: string;
-  fullDay: string;
-  date: string;
-  title: string;
-  time: string;
-  durationMinutes: number;
-  type: WorkoutType;
-  muscles: string[];
-  intensity: WorkoutIntensity;
-  status: WorkoutStatus;
-  notes?: string;
-  sourceTemplateId?: string;
-  exercises?: WorkoutTemplateExercise[];
-};
-
 export type MuscleGroup =
   | "Bauch"
   | "Beine"
@@ -41,6 +48,8 @@ export type MuscleGroup =
   | "Schulter"
   | "Trizeps"
   | "Waden";
+
+export type WorkoutFocus = MuscleGroup | "Cardio" | "Regeneration";
 
 export type ExerciseEquipment =
   | "Eigengewicht"
@@ -65,11 +74,34 @@ export type Exercise = {
   safetyNote: string;
 };
 
-export type WorkoutTemplateExercise = {
+export type WorkoutExercise = {
   exerciseId: Exercise["id"];
   sets: number;
   repetitions: string;
+  weightKg?: number;
+  restSeconds?: number;
+  notes?: string;
 };
+
+export type Workout = {
+  id: string;
+  day: string;
+  fullDay: string;
+  date: string;
+  dateIso: string;
+  title: string;
+  time: string;
+  durationMinutes: number;
+  type: WorkoutType;
+  muscles: WorkoutFocus[];
+  intensity: WorkoutIntensity;
+  status: WorkoutStatus;
+  notes?: string;
+  sourceTemplateId?: string;
+  exercises?: WorkoutExercise[];
+};
+
+export type WorkoutDay = Workout;
 
 export type WorkoutTemplate = {
   id: string;
@@ -78,6 +110,21 @@ export type WorkoutTemplate = {
   durationMinutes: number;
   goal: string;
   difficulty: WorkoutIntensity;
-  muscles: Array<MuscleGroup | "Cardio">;
-  exercises: WorkoutTemplateExercise[];
+  muscles: WorkoutFocus[];
+  exercises: WorkoutExercise[];
+};
+
+export type Streak = {
+  currentWeeks: number;
+  currentTrainingDays: number;
+  longestWeeks: number;
+  lastCompletedWorkoutDateIso?: string;
+};
+
+export type NutritionTip = {
+  id: string;
+  title: string;
+  category: "Protein" | "Kalorien" | "Timing" | "Regeneration" | "Hydration";
+  body: string;
+  tags: string[];
 };

@@ -7,7 +7,7 @@ import {
 } from "react-native";
 
 import { exercises } from "../data/exercises";
-import { workoutTemplates } from "../data/workoutTemplates";
+import { workoutTemplates } from "../data/templates";
 import { WorkoutTemplate } from "../types";
 
 const exerciseNames = new Map(

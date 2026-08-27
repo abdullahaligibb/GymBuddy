@@ -11,7 +11,12 @@ import {
   View,
 } from "react-native";
 
-import { WorkoutDay, WorkoutIntensity, WorkoutType } from "../types";
+import {
+  WorkoutDay,
+  WorkoutFocus,
+  WorkoutIntensity,
+  WorkoutType,
+} from "../types";
 
 type WorkoutFormModalProps = {
   visible: boolean;
@@ -34,7 +39,7 @@ const workoutTypes: WorkoutType[] = [
 
 const intensityOptions: WorkoutIntensity[] = ["Leicht", "Mittel", "Schwer"];
 
-const muscleOptions = [
+const muscleOptions: WorkoutFocus[] = [
   "Brust",
   "Rücken",
   "Beine",
@@ -60,7 +65,7 @@ export function WorkoutFormModal({
   const [duration, setDuration] = useState("60");
   const [type, setType] = useState<WorkoutType>("Push");
   const [intensity, setIntensity] = useState<WorkoutIntensity>("Mittel");
-  const [muscles, setMuscles] = useState<string[]>(["Brust", "Schulter"]);
+  const [muscles, setMuscles] = useState<WorkoutFocus[]>(["Brust", "Schulter"]);
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
@@ -82,7 +87,7 @@ export function WorkoutFormModal({
   const selectedTemplate =
     dayTemplates.find((template) => template.id === dayId) ?? fallbackDay;
 
-  function toggleMuscle(muscle: string) {
+  function toggleMuscle(muscle: WorkoutFocus) {
     setMuscles((current) =>
       current.includes(muscle)
         ? current.filter((item) => item !== muscle)
