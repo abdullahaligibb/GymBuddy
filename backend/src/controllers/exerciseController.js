@@ -1,13 +1,28 @@
+// backend/src/controllers/exerciseController.js
 const { fetchExercisesFromApi } = require('../services/exerciseApiService');
 
 async function getExercises(req, res) {
   try {
-    const { search, muscle, limit, offset } = req.query;
+    const {
+      name,
+      targetMuscles,
+      secondaryMuscles,
+      bodyParts,
+      equipments,
+      limit,
+      after,
+      before,
+    } = req.query;
+
     const exercises = await fetchExercisesFromApi({
-      search: search?.trim(),
-      muscle: muscle?.trim(),
-      limit: Number(limit) || 50,
-      offset: Number(offset) || 0,
+      name: name?.trim(),
+      targetMuscles: targetMuscles?.trim(),
+      secondaryMuscles: secondaryMuscles?.trim(),
+      bodyParts: bodyParts?.trim(),
+      equipments: equipments?.trim(),
+      limit,
+      after,
+      before,
     });
 
     res.json({ exercises });
