@@ -13,7 +13,9 @@
     "buffer": "^6.0.3",
     "expo": "^54.0.36",
     "react": "^19.1.0",
-    "react-native": "^0.81.5"
+    "react-dom": "19.1.0",
+    "react-native": "^0.81.5",
+    "react-native-web": "^0.21.0"
   },
   "devDependencies": {
     "@expo/cli": "^54.0.26",
