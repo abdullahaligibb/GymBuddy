@@ -1,15 +1,153 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // Für Migrationen auf Supabase erforderlich
+}
+
+// -----------------------------------------
+// 1. USER, KÖRPERDATEN & AUTH
+// -----------------------------------------
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum ActivityLevel {
+  SEDENTARY   // Wenig Bewegung (Büro/Schule)
+  LIGHT       // 1-2x Sport pro Woche
+  MODERATE    // 3-4x Sport pro Woche
+  ACTIVE      // 5-6x Sport pro Woche
+  VERY_ACTIVE // Täglich intensives Training
+}
+
+model User {
+  id            String   @id @default(uuid())
+  username      String   @unique
+  email         String   @unique
+  passwordHash  String
+  currentStreak Int      @default(0)
+
+  // Körper- & Zieldaten für die Makro-Berechnung (optional bei Registrierung)
+  age            Int?
+  gender         Gender?
+  heightCm       Float?         // Grösse in cm
+  weightKg       Float?         // Aktuelles Gewicht in kg
+  targetWeightKg Float?         // Zielgewicht in kg
+  targetDate     DateTime?      // Bis wann das Ziel erreicht werden soll
+  activityLevel  ActivityLevel?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Beziehungen
+  trainingPlans  TrainingPlan[]
+  workouts       Workout[]
+  exercises      Exercise[]       // Eigene erstellte Übungen
+  macroTarget    MacroTarget?     // 1:1 Berechnetes Tagesziel
+  dailyMacroLogs DailyMacroLog[]  // 1:N Täglich eingetragene Makros
+}
+
+// -----------------------------------------
+// 2. MAKROS (Ziele & Tägliches Tracking)
+// -----------------------------------------
+model MacroTarget {
+  id        String   @id @default(uuid())
+  calories  Int      // Ziel-Kalorien (kcal)
+  protein   Int      // Ziel-Protein (g)
+  carbs     Int      // Ziel-Kohlenhydrate (g)
+  fat       Int      // Ziel-Fett (g)
+  updatedAt DateTime @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DailyMacroLog {
+  id       String @id @default(uuid())
+  date     String // Format YYYY-MM-DD
+  calories Int    @default(0)
+  protein  Int    @default(0)
+  carbs    Int    @default(0)
+  fat      Int    @default(0)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Pro User und Datum genau ein Tages-Log (kann über den Tag hinweg addiert/aktualisiert werden)
+  @@unique([userId, date])
+}
+
+// -----------------------------------------
+// 3. TRAINING (TrainingPlan -> Workout -> Exercise)
+// -----------------------------------------
+enum WorkoutStatus {
+  GEPLANT
+  ERLEDIGT
+  VERPASST
+}
+
+model TrainingPlan {
+  id          String   @id @default(uuid())
+  name        String   // z.B. "Push-Pull-Legs"
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workouts Workout[]
+}
+
+model Workout {
+  id        String        @id @default(uuid())
+  name      String        // z.B. "Oberkörper" oder "Push Day"
+  date      String?       // Format YYYY-MM-DD für den Kalender
+  duration  Int?          // Dauer in Minuten
+  status    WorkoutStatus @default(GEPLANT)
+  createdAt DateTime      @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  trainingPlanId String?
+  trainingPlan   TrainingPlan? @relation(fields: [trainingPlanId], references: [id], onDelete: SetNull)
+
+  exercises WorkoutExercise[]
+}
+
+model Exercise {
+  id               String   @id @default(uuid())
+  externalId       String?  @unique // ID aus der ExerciseDB-API
+  name             String
+  description      String?
+  targetMuscles    String[]
+  secondaryMuscles String[]
+  equipments       String[]
+  gifUrl           String?
+
+  // null = globale Übung (z.B. aus ExerciseDB), gesetzt = eigene Übung des Users
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  workoutExercises WorkoutExercise[]
+}
+
+model WorkoutExercise {
+  id       String @id @default(uuid())
+  position Int    // Reihenfolge im Workout (1, 2, 3...)
+  sets     Int?
+  reps     Int?
+  weight   Float? // Gewicht in kg
+
+  workoutId  String
+  workout    Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exerciseId String
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([workoutId, exerciseId, position])
 }
