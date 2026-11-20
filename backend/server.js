@@ -7,6 +7,7 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const APP_NAME = process.env.APP_NAME || "GymBuddy API";
 const exerciseRoutes = require('./src/routes/exerciseRoutes');
+const authRoutes = require('./src/routes/authRoutes');
 
 app.use(cors());
 app.use(express.json());
@@ -23,3 +24,5 @@ app.use("/api/exercises", exerciseRoutes);
 app.listen(PORT, () => {
   console.log(`${APP_NAME} läuft auf Port ${PORT}`);
 });
+
+app.use('/api/auth', authRoutes);
