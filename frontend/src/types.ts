@@ -63,15 +63,19 @@ export type ExerciseDifficulty = "Einsteiger" | "Mittel" | "Fortgeschritten";
 
 export type Exercise = {
   id: string;
+  externalId?: string;
+  source?: "local" | "api";
   name: string;
-  muscle: MuscleGroup;
-  equipment: ExerciseEquipment;
-  level: ExerciseDifficulty;
+  muscle: MuscleGroup | "Unbekannt";
+  equipment: ExerciseEquipment | "Unbekannt";
+  level: ExerciseDifficulty | "Nicht angegeben";
+  targetMuscles?: string[];
+  equipments?: string[];
   description: string;
-  recommendedSets: number;
-  recommendedRepetitions: string;
-  commonMistake: string;
-  safetyNote: string;
+  recommendedSets?: number;
+  recommendedRepetitions?: string;
+  commonMistake?: string;
+  safetyNote?: string;
 };
 
 export type WorkoutExercise = {
