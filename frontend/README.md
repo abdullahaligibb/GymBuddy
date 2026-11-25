@@ -1,14 +1,13 @@
-# Gym Buddy Mobile Base
+# GymBuddy Frontend
 
-Gym Buddy ist eine kleine React-Native-Startversion für eine Gym- und
-Fitness-App im Modul 306. Die Base ist bewusst noch nicht komplett fertig.
-Sie zeigt bereits ein mobiles Dashboard, einen Wochenkalender, einen
-Streak-Begleiter und erste Übungen.
+React Native, Expo und TypeScript. Der aktuelle Prototyp zeigt Demo-Daten; Änderungen werden derzeit im Arbeitsspeicher gehalten. Siehe [Projektübersicht](../README.md) für den aktuellen Stand und die Zuständigkeiten.
 
 ## Starten
 
 ```bash
-npm install
+npm ci
+npm run typecheck
+npm test
 npm start
 ```
 
@@ -22,16 +21,13 @@ Android-/iOS-Emulator gestartet werden.
 - Bottom Navigation als Basis
 - Dashboard mit Wochenziel, Streak und Kurzstatistik
 - Horizontaler Wochenkalender mit Demo-Trainings
-- Erste Übungsbibliothek
-- Noch keine echte Formularlogik
-- Noch kein LocalStorage
-- Noch keine ausgebauten Detailseiten
+- Übungsbibliothek mit Suche, kombinierten Filtern und Details
+- Trainingsübungen mit Entwurf, Validierung und Bearbeitung
+- Unabhängige Kopien von Workout-Vorlagen mit Ersetzungsbestätigung
+- Ernährungstipps mit Suche, Kategorien und Details
+- Workout-Formular im Prototyp
+- Noch keine dauerhafte Speicherung und keine Backend-Verbindung in App.tsx
 
-## Geplante Aufteilung
+## Zusammenarbeit
 
-Die nächsten Schritte können in vier getrennten Commits umgesetzt werden:
-
-- Gabriel: Grundlogik, Datenmodell und LocalStorage
-- Arion: Kalender und Workout-Formular
-- Abdullah: Übungsbibliothek und Workout-Vorlagen
-- Loris: Design-Polish, Mobile-Navigation, Fortschritt und Ernährung
+Die aktualisierte Aufteilung steht im [Projektplan](../docs/project-plan.md). Die frühere reine Offline-Planung wurde um das von Loris entwickelte Backend ergänzt. Die Zusammenführung der Datenflüsse ist noch offen.
