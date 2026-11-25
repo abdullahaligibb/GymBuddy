@@ -73,7 +73,7 @@ export const initialWorkouts: WorkoutDay[] = [
     type: "Rest Day",
     muscles: [],
     intensity: "Leicht",
-    status: "ruhe",
+    status: "ungeplant",
   },
   {
     id: "friday-legs",

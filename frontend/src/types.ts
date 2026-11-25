@@ -1,4 +1,9 @@
-export type WorkoutStatus = "erledigt" | "geplant" | "verpasst" | "ruhe";
+export type WorkoutStatus =
+  | "erledigt"
+  | "geplant"
+  | "verpasst"
+  | "ruhe"
+  | "ungeplant";
 
 export type TrainingGoal =
   | "Muskelaufbau"
@@ -116,6 +121,30 @@ export type WorkoutTemplate = {
   difficulty: WorkoutIntensity;
   muscles: WorkoutFocus[];
   exercises: WorkoutExercise[];
+};
+
+export type WorkoutPlan = WorkoutTemplate & {
+  isCustom?: boolean;
+};
+
+export type ActivityLevel =
+  | "Wenig aktiv"
+  | "Leicht aktiv"
+  | "Moderat aktiv"
+  | "Sehr aktiv";
+
+export type HealthProfile = {
+  name: string;
+  birthDateIso: string;
+  heightCm: number;
+  weightKg: number;
+  targetWeightKg: number;
+  targetDateIso: string;
+  activityLevel: ActivityLevel;
+  primaryGoal: TrainingGoal;
+  experienceLevel: ExperienceLevel;
+  weeklyWorkoutGoal: number;
+  preferredTrainingDays: string[];
 };
 
 export type Streak = {
