@@ -84,6 +84,7 @@ export type Exercise = {
 };
 
 export type WorkoutExercise = {
+  catalogEntry?: Exercise;
   exerciseId: Exercise["id"];
   associationId?: string;
   sets: number;

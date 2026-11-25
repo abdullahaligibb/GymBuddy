@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiError, apiMessage } from "./api";
+import { ApiError, FeatureUnavailableError, apiMessage } from "./api";
 import type { AppApi } from "./api";
 import type { DailyMacroLog, Exercise, HealthProfile, MacroValues, Workout, WorkoutPlan } from "../types";
 import { exercises as localExercises } from "../data/exercises";
@@ -12,6 +12,7 @@ export type TrainingData = {
   exercises: Exercise[];
   macroTarget: MacroValues | null;
   macroLogs: DailyMacroLog[];
+  notices: string[];
 };
 
 export function useTrainingData(api: AppApi, token: string, onExpired: (token: string, expired: boolean) => void) {
@@ -31,12 +32,31 @@ export function useTrainingData(api: AppApi, token: string, onExpired: (token: s
     running.current = true;
     setLoading(true);
     setError("");
+    const notices: string[] = [];
+    async function optional<T>(request: Promise<T>, fallback: T): Promise<T> {
+      try { return await request; }
+      catch (failure) {
+        if (!(failure instanceof FeatureUnavailableError)) throw failure;
+        notices.push(failure.message);
+        return fallback;
+      }
+    }
+    async function catalog() {
+      try { return await api.listExercises(); }
+      catch (failure) {
+        if (failure instanceof ApiError && failure.status === 401) throw failure;
+        notices.push("Der zusätzliche Übungskatalog konnte nicht geladen werden. Die mitgelieferten und im Training gespeicherten Übungen bleiben verfügbar.");
+        return [];
+      }
+    }
     try {
       const [workouts, plans, profile, exercises, macroTarget, macroLogs] = await Promise.all([
-        api.listWorkouts(token), api.listPlans(token), api.getProfile(token),
-        api.listExercises(), api.getMacroTarget(token), api.listMacroLogs(token),
+        api.listWorkouts(token), optional(api.listPlans(token), []), optional(api.getProfile(token), null),
+        catalog(), optional(api.getMacroTarget(token), null), optional(api.listMacroLogs(token), []),
       ]);
-      setData({ workouts, plans, profile, exercises: mergeExerciseCatalogs(localExercises, exercises), macroTarget, macroLogs });
+      const localIds = new Set(localExercises.map((exercise) => exercise.id));
+      const embedded = workouts.flatMap((day) => (day.exercises ?? []).flatMap((row) => row.catalogEntry && !localIds.has(row.catalogEntry.id) ? [row.catalogEntry] : []));
+      setData({ workouts, plans, profile, exercises: mergeExerciseCatalogs(localExercises, embedded, exercises), macroTarget, macroLogs, notices: [...notices].sort() });
     } catch (failure) {
       report(failure);
     } finally {

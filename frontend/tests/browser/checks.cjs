@@ -3,6 +3,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
+const { startHttpFixture } = require('./http-fixture.cjs');
 const base = process.env.APP_URL || 'http://localhost:8091';
 const output = path.resolve(__dirname, '../../test-results/browser');
 
@@ -60,6 +61,77 @@ async function appChecks(page) {
     await Promise.all(document.getAnimations().filter(animation=>animation.effect?.getTiming().iterations!==Infinity).map(animation=>animation.finished.catch(()=>{})));
   });
   await page.screenshot({path:path.join(output,'integrated-editor.png')});
+}
+
+async function httpChecks(page) {
+  const fixture=await startHttpFixture();
+  const diagnostics=[];
+  page.on('requestfailed',request=>diagnostics.push(`${request.method()} ${request.failure()?.errorText}`));
+  page.on('console',message=>{if(message.type()==='error')diagnostics.push(message.text());});
+  try {
+    await page.clock.setFixedTime(new Date(2026,10,25,12));
+    await page.route('**/index.ts.bundle?*',async route=>{
+      const response=await route.fetch({url:`${base}/tests/browser/http-harness.bundle?platform=web&dev=true&hot=false`});
+      await route.fulfill({response});
+    });
+    const signIn=async(email='server@example.test')=>{
+      await page.getByLabel('E-Mail',{exact:true}).fill(email);
+      await page.getByLabel('Passwort',{exact:true}).fill('secret');
+      await page.getByRole('button',{name:'Anmelden',exact:true}).click();
+    };
+    await page.goto(`${base}/?api=${encodeURIComponent(fixture.url)}`);
+    assert.equal(await page.getByRole('button',{name:'Demo öffnen',exact:true}).count(),0);
+    await signIn();await page.getByText('Hallo ServerTest',{exact:true}).waitFor();
+    await page.getByRole('tab',{name:'Kalender',exact:true}).click();
+    await page.getByRole('button',{name:'Übungen für Montag bearbeiten',exact:true}).click();
+    await page.getByLabel('Server Presse: Sätze',{exact:true}).fill('5');
+    await page.getByLabel('Server Presse: Wiederholungen oder Zeit',{exact:true}).fill('30 Sek.');
+    await page.getByRole('button',{name:'Übungen speichern',exact:true}).click();
+    await page.getByRole('dialog').waitFor({state:'hidden'});
+    const writes=fixture.state.requests.filter(request=>request.method==='PUT');
+    assert.equal(writes[0].body.exercises[0].sets,5);assert.equal(writes[0].body.exercises[0].repetitions,'30 Sek.');assert.equal(writes[0].body.exercises[0].weight,0);
+    await page.reload();await signIn();await page.getByText('Hallo ServerTest',{exact:true}).waitFor();
+    await page.getByRole('tab',{name:'Kalender',exact:true}).click();
+    await page.getByRole('button',{name:'Übungen für Montag bearbeiten',exact:true}).click();
+    assert.equal(await page.getByLabel('Server Presse: Sätze',{exact:true}).inputValue(),'5');
+    assert.equal(await page.getByLabel('Server Presse: Wiederholungen oder Zeit',{exact:true}).inputValue(),'30 Sek.');
+    fixture.state.failNextWrite=true;
+    await page.getByLabel('Server Presse: Sätze',{exact:true}).fill('6');
+    await page.getByRole('button',{name:'Übungen speichern',exact:true}).click();
+    await page.getByText(/Die Übungen konnten nicht gespeichert werden/).waitFor();
+    assert.equal(fixture.data.get('one').workouts[0].exercises[0].sets,5);
+    assert.equal(await page.getByLabel('Server Presse: Sätze',{exact:true}).inputValue(),'6');
+    await page.getByRole('button',{name:'Übungen speichern',exact:true}).click();
+    await page.getByRole('dialog').waitFor({state:'hidden'});
+    assert.equal(fixture.data.get('one').workouts[0].exercises[0].sets,6);
+    await page.getByRole('button',{name:'Profil',exact:true}).click();await page.getByRole('button',{name:'Abmelden',exact:true}).click();
+    fixture.state.holdNextWorkouts=true;
+    const held=new Promise(resolve=>{fixture.state.onHold=resolve;});
+    await signIn();await held;await page.getByRole('button',{name:'Abmelden',exact:true}).waitFor();
+    await page.waitForFunction(()=>document.body.textContent.includes('Abmelden'));
+    await page.getByRole('button',{name:'Abmelden',exact:true}).click();
+    await signIn('second@example.test');await page.getByText('Hallo ServerZwei',{exact:true}).waitFor();
+    const oldResponse=page.waitForResponse(response=>response.url().endsWith('/api/workouts')&&response.status()===401);
+    fixture.state.releaseOldLoad();await oldResponse;
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    await page.getByText('Hallo ServerZwei',{exact:true}).waitFor();
+    await page.getByRole('tab',{name:'Kalender',exact:true}).click();
+    assert.equal(await page.getByText('Servertraining',{exact:true}).count(),0);
+    fixture.state.catalogUnavailable=true;
+    await page.goto(`${base}/?api=${encodeURIComponent(fixture.url)}&contract=legacy`);
+    // Same backend session is restored within this page only after a fresh manual login.
+    await signIn();
+    await page.getByText('Hallo ServerTest',{exact:true}).waitFor();
+    await page.getByText('Profil ist auf diesem Server noch nicht verfügbar.',{exact:true}).waitFor();
+    await page.getByText(/Der zusätzliche Übungskatalog konnte nicht geladen werden/).waitFor();
+    await page.getByRole('tab',{name:'Kalender',exact:true}).click();
+    await page.getByRole('button',{name:'Übungen für Montag bearbeiten',exact:true}).click();
+    const count=fixture.state.requests.filter(request=>request.method==='PUT').length;
+    await page.getByRole('button',{name:'Übungen speichern',exact:true}).click();
+    await page.getByText(/Die Übungen konnten nicht gespeichert werden/).waitFor();
+    assert.equal(fixture.state.requests.filter(request=>request.method==='PUT').length,count);
+  }catch(error){console.error('HTTP diagnostics:',diagnostics);throw error;}
+  finally{await fixture.close();}
 }
 
 async function catalogChecks(page) {
@@ -202,7 +274,7 @@ async function failureChecks(page) {
   const browser = await chromium.launch({headless:true,...(chrome?{executablePath:chrome}:{})});
   const results=[];
   try {
-    for (const [name,check] of [['integrated app',appChecks],['controlled save failures',failureChecks],['accounts and macro tracking',accountChecks],['complete plan editor',planChecks],['shared exercise catalog',catalogChecks]]) {
+    for (const [name,check] of [['integrated app',appChecks],['controlled save failures',failureChecks],['accounts and macro tracking',accountChecks],['complete plan editor',planChecks],['shared exercise catalog',catalogChecks],['HTTP integration',httpChecks]]) {
       if (process.env.CHECK_GROUP && process.env.CHECK_GROUP !== name) continue;
       const page = await browser.newPage({viewport:{width:390,height:844}});
       page.setDefaultTimeout(20000);const errors=[];page.on('pageerror',error=>errors.push(error.message));

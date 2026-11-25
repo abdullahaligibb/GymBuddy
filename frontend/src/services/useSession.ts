@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, apiMessage } from "./api";
 import type { AppApi } from "./api";
-import { tokenStorage } from "./sessionStorage";
+import { createTokenStorage } from "./sessionStorage";
 import type { Session } from "../types";
 
 export function useSession(api: AppApi) {
+  const tokenStorage = useMemo(() => createTokenStorage(api.sessionKey ?? "gymbuddy.session.demo.v1"), [api.sessionKey]);
   const [session, setSession] = useState<Session | null>(null);
   const [checking, setChecking] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -12,6 +13,7 @@ export function useSession(api: AppApi) {
   const [restoreFailed, setRestoreFailed] = useState(false);
   const running = useRef(false);
   const pendingErase = useRef(false);
+  const activeToken = useRef<string | null>(null);
 
   const restore = useCallback(async () => {
     if (running.current) return;
@@ -26,7 +28,11 @@ export function useSession(api: AppApi) {
         return;
       }
       const token = await tokenStorage.read();
-      if (token) setSession({ token, user: await api.me(token) });
+      if (token) {
+        const user = await api.me(token);
+        activeToken.current = token;
+        setSession({ token, user });
+      }
     } catch (failure) {
       if (failure instanceof ApiError && failure.status === 401) {
         await tokenStorage.clear().catch(() => setRestoreFailed(true));
@@ -38,7 +44,7 @@ export function useSession(api: AppApi) {
       running.current = false;
       setChecking(false);
     }
-  }, [api]);
+  }, [api, tokenStorage]);
 
   useEffect(() => { void restore(); }, [restore]);
 
@@ -50,6 +56,7 @@ export function useSession(api: AppApi) {
     try {
       const next = await request();
       await tokenStorage.write(next.token);
+      activeToken.current = next.token;
       setSession(next);
     } catch (failure) {
       setError(apiMessage(failure));
@@ -60,8 +67,9 @@ export function useSession(api: AppApi) {
   }
 
   const end = useCallback(async (token: string, expired = false) => {
-    if (running.current) return;
+    if (running.current || activeToken.current !== token) return;
     running.current = true;
+    activeToken.current = null;
     setSession(null);
     setBusy(true);
     setError(expired ? "Deine Sitzung ist abgelaufen. Bitte erneut anmelden." : "");
@@ -80,7 +88,7 @@ export function useSession(api: AppApi) {
       running.current = false;
       setBusy(false);
     }
-  }, [api]);
+  }, [api, tokenStorage]);
 
   return { session, checking, busy, error, restoreFailed, restore, authenticate, end };
 }

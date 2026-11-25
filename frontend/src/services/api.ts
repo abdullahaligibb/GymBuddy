@@ -9,7 +9,14 @@ export class ApiError extends Error {
   }
 }
 
+export class FeatureUnavailableError extends ApiError {
+  constructor(message: string) { super(501, message); }
+}
+
 export type AppApi = {
+  mode?: "demo" | "server";
+  sessionKey?: string;
+  notice?: string;
   login(input: Login): Promise<Session>;
   register(input: Registration): Promise<Session>;
   me(token: string): Promise<Account>;
@@ -34,12 +41,13 @@ export type AppApi = {
 export function validateLogin(input: Login) {
   return {
     email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim()) ? "" : "Gültige E-Mail-Adresse eingeben.",
-    password: input.password.length >= 8 ? "" : "Mindestens 8 Zeichen eingeben.",
+    password: input.password.length ? "" : "Passwort eingeben.",
   };
 }
 
 export function validateRegistration(input: Registration) {
   return { ...validateLogin(input),
+    password: input.password.length >= 8 ? "" : "Mindestens 8 Zeichen eingeben.",
     username: /^.{2,40}$/.test(input.username.trim()) ? "" : "Name muss 2 bis 40 Zeichen haben.",
   };
 }
