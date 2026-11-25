@@ -1,5 +1,6 @@
 import { createEmptyWorkoutDay, parseIsoDate, toIsoDate } from "../domain/calendar";
 import type { Workout, WorkoutExercise } from "../types";
+import { mapApiExercise } from "./exerciseCatalogApi";
 
 const statuses = {
   GEPLANT: "geplant", ERLEDIGT: "erledigt", VERPASST: "verpasst", RUHE: "ruhe",
@@ -28,14 +29,15 @@ export type WorkoutDto = {
     weight?: number | null;
     restSeconds?: number | null;
     notes?: string | null;
-    exercise?: { externalId?: string | null; catalogId?: string | null };
+    exercise?: { externalId?: string | null; catalogId?: string | null; name?: string; description?: string | null; targetMuscles?: string[]; equipments?: string[] };
   }[];
 };
 
 function mapExercise(row: NonNullable<WorkoutDto["exercises"]>[number]): WorkoutExercise {
+  const exerciseId = row.exercise?.catalogId ?? (row.exercise?.externalId ? `api:${row.exercise.externalId}` : row.exerciseId);
   return {
-    exerciseId: row.exercise?.catalogId ?? (row.exercise?.externalId
-      ? `api:${row.exercise.externalId}` : row.exerciseId),
+    exerciseId,
+    ...(row.exercise?.name ? { catalogEntry: { ...mapApiExercise({ ...row.exercise, id: row.exercise.externalId ?? row.exerciseId }), id: exerciseId } } : {}),
     associationId: row.id,
     sets: row.sets ?? 0,
     repetitions: row.repetitions ?? (row.reps == null ? "" : String(row.reps)),
@@ -48,7 +50,7 @@ function mapExercise(row: NonNullable<WorkoutDto["exercises"]>[number]): Workout
 export function fromWorkoutDto(dto: WorkoutDto): Workout | undefined {
   if (!dto.date || !/^\d{4}-\d{2}-\d{2}$/.test(dto.date)) return;
   const date = parseIsoDate(dto.date);
-  if (toIsoDate(date) !== dto.date || !statuses[dto.status]) return;
+  if (toIsoDate(date) !== dto.date || !Object.prototype.hasOwnProperty.call(statuses, dto.status)) return;
   return {
     ...createEmptyWorkoutDay(date),
     id: dto.id,
@@ -80,5 +82,12 @@ export function toWorkoutDto(workout: Workout) {
     notes: workout.notes ?? null,
     sourceTemplateId: workout.sourceTemplateId ?? null,
     trainingPlanId: workout.trainingPlanId ?? null,
+    exercises: (workout.exercises ?? []).map((row, index) => ({
+      ...(row.associationId ? { id: row.associationId } : {}),
+      catalogId: row.exerciseId,
+      ...(row.exerciseId.startsWith("api:") ? { externalId: row.exerciseId.slice(4) } : {}),
+      position: index + 1, sets: row.sets, repetitions: row.repetitions,
+      weight: row.weightKg ?? null, restSeconds: row.restSeconds ?? null, notes: row.notes ?? null,
+    })),
   };
 }

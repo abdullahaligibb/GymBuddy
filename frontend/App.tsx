@@ -27,7 +27,8 @@ import { confirmAction } from "./src/components/feedback";
 import { addDays, formatWeekRange, getWeekDays, isFutureDate, toIsoDate } from "./src/domain/calendar";
 import { createWorkoutFromTemplate } from "./src/domain/workoutTemplates";
 import { HealthProfile, WorkoutDay, WorkoutPlan, WorkoutStatus, WorkoutTemplate } from "./src/types";
-import { createMockApi, demoLogin } from "./src/services/mockApi";
+import { demoLogin } from "./src/services/mockApi";
+import { configuredApi } from "./src/services/configuredApi";
 import { useSession } from "./src/services/useSession";
 import { useTrainingData } from "./src/services/useTrainingData";
 import { ApiError } from "./src/services/api";
@@ -42,13 +43,18 @@ const gymBuddyLogo = require("./assets/logo-gymbuddy.png");
 
 const tabs = ["Start", "Kalender", "Übungen", "Statistik", "Ernährung"] as const;
 type Tab = typeof tabs[number];
-const mockApi = createMockApi();
+const runtime = configuredApi({ mode: process.env.EXPO_PUBLIC_API_MODE, baseUrl: process.env.EXPO_PUBLIC_API_URL, contract: process.env.EXPO_PUBLIC_API_CONTRACT });
 
 export default function App() {
   return <GymBuddyApp />;
 }
 
-export function GymBuddyApp({ api = mockApi }: { api?: AppApi }) {
+export function GymBuddyApp({ api = runtime.api }: { api?: AppApi }) {
+  if (!api) return <SafeAreaView style={styles.safeArea}><View style={styles.scrollContent}><Text style={styles.brand}>Gym Buddy</Text><Text accessibilityRole="alert" style={styles.error}>{runtime.error}</Text></View></SafeAreaView>;
+  return <SessionApp key={api.sessionKey ?? api.mode ?? "demo"} api={api} />;
+}
+
+function SessionApp({ api }: { api: AppApi }) {
   const auth = useSession(api);
   if (!auth.session) {
     return <AuthScreen
@@ -57,7 +63,8 @@ export function GymBuddyApp({ api = mockApi }: { api?: AppApi }) {
       error={auth.error}
       restoreFailed={auth.restoreFailed}
       onRetry={auth.restore}
-      onDemo={api === mockApi ? () => auth.authenticate(() => api.login(demoLogin)) : undefined}
+      environmentLabel={api.mode === "server" ? "Serverbetrieb" : "Demo · Konten und Trainingsdaten werden nur für diese Sitzung gespeichert."}
+      onDemo={api.mode !== "server" ? () => auth.authenticate(() => api.login(demoLogin)) : undefined}
       onLogin={(input) => auth.authenticate(() => api.login(input))}
       onRegister={(input) => auth.authenticate(() => api.register(input))}
     />;
@@ -111,9 +118,9 @@ function TrainingApp({ api, username, token, endSession }: {
         <Text style={styles.brand}>Gym Buddy</Text>
         {loading ? <ActivityIndicator color="#7CFF6B" accessibilityLabel="Daten werden geladen" /> : <>
           <Text accessibilityRole="alert" style={styles.error}>{error}</Text>
-          <TouchableOpacity style={styles.profileButton} onPress={load}><Text style={styles.profileButtonText}>Erneut versuchen</Text></TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" style={styles.profileButton} onPress={load}><Text style={styles.profileButtonText}>Erneut versuchen</Text></TouchableOpacity>
         </>}
-        <TouchableOpacity style={styles.profileButton} onPress={() => endSession(token)}><Text style={styles.profileButtonText}>Abmelden</Text></TouchableOpacity>
+        <TouchableOpacity accessibilityRole="button" style={styles.profileButton} onPress={() => endSession(token)}><Text style={styles.profileButtonText}>Abmelden</Text></TouchableOpacity>
       </View>
     </SafeAreaView>;
   }
@@ -251,6 +258,10 @@ function TrainingApp({ api, username, token, endSession }: {
             <Text style={styles.profileButtonText}>{showProfile ? "Zurück" : "Profil"}</Text>
           </TouchableOpacity>
         </View>
+        {api.mode !== "server" ? <Text style={styles.bodyText}>Demo · Änderungen sind nicht dauerhaft gespeichert.</Text> : <Text style={styles.bodyText}>Serverbetrieb</Text>}
+        {api.notice ? <Text style={styles.bodyText}>{api.notice}</Text> : null}
+        {data.notices.map((notice) => <Text accessibilityRole="alert" key={notice} style={styles.error}>{notice}</Text>)}
+        {data.notices.length ? <TouchableOpacity accessibilityRole="button" disabled={loading || saving} onPress={load} style={styles.profileButton}><Text style={styles.profileButtonText}>Serverfunktionen erneut laden</Text></TouchableOpacity> : null}
         {actionError || error ? <Text accessibilityRole="alert" style={styles.error}>{actionError || error}</Text> : null}
 
         {!showProfile && tab === "Start" ? <View style={styles.heroPanel}>

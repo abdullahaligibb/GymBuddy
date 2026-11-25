@@ -7,6 +7,7 @@ import { validateLogin, validateRegistration } from "../services/api";
 import type { Login, Registration } from "../types";
 
 type Props = {
+  environmentLabel?: string;
   checking: boolean;
   busy: boolean;
   error: string;
@@ -19,7 +20,7 @@ type Props = {
 
 const logo = require("../../assets/logo-gymbuddy.png");
 
-export function AuthScreen({ checking, busy, error, restoreFailed, onRetry, onDemo, onLogin, onRegister }: Props) {
+export function AuthScreen({ checking, busy, error, restoreFailed, onRetry, onDemo, onLogin, onRegister, environmentLabel }: Props) {
   const [registering, setRegistering] = useState(false);
   const [draft, setDraft] = useState({ username: "", email: "", password: "" });
   const [errors, setErrors] = useState<Partial<Record<keyof Registration, string>>>({});
@@ -46,6 +47,7 @@ export function AuthScreen({ checking, busy, error, restoreFailed, onRetry, onDe
               <Image source={logo} style={styles.logo} />
               <Text style={styles.brand}>Gym Buddy</Text>
             </View>
+            {environmentLabel ? <Text style={styles.label}>{environmentLabel}</Text> : null}
             {checking ? <ActivityIndicator color="#7CFF6B" accessibilityLabel="Sitzung wird geprüft" /> : <>
               {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
               {restoreFailed ? (
