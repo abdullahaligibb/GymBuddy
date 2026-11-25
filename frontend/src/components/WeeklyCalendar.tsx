@@ -6,6 +6,7 @@ type WeeklyCalendarProps = {
   workouts: WorkoutDay[];
   onPlanDay?: (workout: WorkoutDay) => void;
   onEditWorkout?: (workout: WorkoutDay) => void;
+  onEditExercises?: (workout: WorkoutDay) => void;
   onMarkDone?: (workout: WorkoutDay) => void;
   onDeleteWorkout?: (workout: WorkoutDay) => void;
 };
@@ -46,6 +47,7 @@ export function WeeklyCalendar({
   workouts,
   onPlanDay,
   onEditWorkout,
+  onEditExercises,
   onMarkDone,
   onDeleteWorkout,
 }: WeeklyCalendarProps) {
@@ -80,7 +82,7 @@ export function WeeklyCalendar({
             <Text style={styles.metaText}>{item.type} · {item.intensity}</Text>
             {item.exercises && item.exercises.length > 0 && (
               <Text style={styles.templateMetaText}>
-                {item.exercises.length} Übungen aus Vorlage
+                {item.exercises.length} Übungen
               </Text>
             )}
 
@@ -110,6 +112,7 @@ export function WeeklyCalendar({
                     </TouchableOpacity>
                   )}
                 </View>
+                {onEditExercises && item.type !== "Rest Day" ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Übungen für ${item.fullDay} bearbeiten`} style={styles.secondaryAction} onPress={() => onEditExercises(item)}><Text style={styles.secondaryActionText}>Übungen bearbeiten</Text></TouchableOpacity> : null}
                 <TouchableOpacity
                   style={styles.deleteAction}
                   onPress={() => onDeleteWorkout?.(item)}
