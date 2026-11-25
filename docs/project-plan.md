@@ -58,7 +58,7 @@ Aktuelle Abdullah-Pakete: `feature/abdullah-exercise-library`, `feature/abdullah
 | --- | --- | --- |
 | Abdullah Ali | 1f060a1, 6e6469c, ea2616a, bd5b00f; d82cf1d, 788ece2, 9c86e69, 74a63b2 | Katalog, Suche und Details, Vorlagen; danach geprüfter Editor, Validierung und Ernährungstipps |
 | Gabriel Maurer | c7f1044, 97330d6, 8a805c5 | Demo-Datenmodell, Statistikfunktionen und Dashboard-Anbindung |
-| Arion Zeqaj | 72973b4, f580e26, dd6f4ad, 2d0b322 | Planungsdialog, Kalenderaktionen, Schweizer Sprachkorrekturen und App-Logo |
+| Arion Zeqaj | 72973b4, f580e26, dd6f4ad, 2d0b322; c7ca08a bis 1b66cb8 | Planungsdialog und Kalenderaktionen; danach dynamische Wochen, Profil-, Trainingsdetails und Planverwaltung sowie sechs Logiktests |
 | Loris Pérez | 24d216a, 622ed88, 5ad209b, db8b67c, dceba7f, b80d8bf | Backend-Grundlage, externe Übungen, Authentifizierung und Workout-Endpunkte |
 
 Diese Auswahl belegt vorhandene Änderungen, ist aber keine vollständige Leistungsbewertung der Teammitglieder. Sie ist aus `git log origin/main --no-merges` des aktuellen Stands abgeleitet.

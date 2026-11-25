@@ -16,11 +16,17 @@ Das Suchfeld sucht nach dem Übungsnamen, unabhängig von Grossschreibung und ä
 
 ## Workout aus einer Vorlage
 
-Unter „Workout-Vorlagen“ die gewünschte Vorlage lesen und übernehmen. Tag und Uhrzeit wählen. Die Uhrzeit muss beispielsweise `18:00` lauten. Bei einem belegten Tag zuerst „Im Kalender einplanen“ und danach die ausdrückliche Ersetzungsbestätigung wählen. „Ersetzen abbrechen“ oder Schliessen lässt das alte Training bestehen. Eine Übernahme erzeugt eine eigene Kopie: spätere Änderungen am Training verändern die Vorlage nicht.
+Unter „Workout-Vorlagen“ bei der gewünschten Vorlage „Auswählen“ wählen. Im Übernahmedialog sind die Übungen und Vorgaben sichtbar. Tag und Uhrzeit wählen. Die Uhrzeit muss beispielsweise `18:00` lauten. Bei einem belegten Tag zuerst „Im Kalender einplanen“ und danach die ausdrückliche Ersetzungsbestätigung wählen. „Ersetzen abbrechen“ oder Schliessen lässt das alte Training bestehen. Eine Übernahme erzeugt eine eigene Kopie: spätere Änderungen am Training verändern die Vorlage nicht.
 
 ## Ernährungstipps
 
 Unter „Ernährungstipps“ einen Titel, ein Wort aus dem Inhalt oder ein Stichwort suchen. Eine Kategorie schränkt die Suche zusätzlich ein. „Tipp lesen“ öffnet Inhalt und Stichwörter; „Weniger anzeigen“ schliesst die Details. Wenn keine Treffer erscheinen, Suche oder Kategorie ändern oder die Ernährungsfilter zurücksetzen.
+
+## Beispiel des Übungseditors
+
+![Übungseditor im mobilen Browserformat mit Beispieldaten](images/workout-editor.png)
+
+Die Felder gehören jeweils zur darüber genannten Übung. Die untere Speicheraktion bestätigt den vollständigen Entwurf; „Keine Änderungen“ bedeutet, dass seit dem Öffnen noch nichts geändert wurde.
 
 ## Bei Problemen
 
