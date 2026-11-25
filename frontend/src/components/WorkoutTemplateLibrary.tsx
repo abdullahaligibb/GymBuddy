@@ -6,28 +6,33 @@ import {
   View,
 } from "react-native";
 
-import { exercises } from "../data/exercises";
-import { workoutTemplates } from "../data/templates";
-import { WorkoutTemplate } from "../types";
-
-const exerciseNames = new Map(
-  exercises.map((exercise) => [exercise.id, exercise.name]),
-);
+import { exercises as defaultCatalog } from "../data/exercises";
+import { workoutTemplates as defaultTemplates } from "../data/templates";
+import { Exercise, WorkoutTemplate } from "../types";
+import { validateTemplate } from "../domain/workoutTemplates";
 
 type WorkoutTemplateLibraryProps = {
   onAdoptTemplate: (template: WorkoutTemplate) => void;
+  templates?: readonly WorkoutTemplate[];
+  exercises?: readonly Exercise[];
 };
 
 export function WorkoutTemplateLibrary({
   onAdoptTemplate,
+  templates = defaultTemplates,
+  exercises = defaultCatalog,
 }: WorkoutTemplateLibraryProps) {
+  const exerciseNames = new Map(exercises.map((exercise) => [exercise.id, exercise.name]));
   return (
     <ScrollView
       contentContainerStyle={styles.templateList}
       horizontal
       showsHorizontalScrollIndicator={false}
     >
-      {workoutTemplates.map((template) => (
+      {!templates.length ? <Text style={styles.goalText}>Noch keine Vorlagen vorhanden.</Text> : null}
+      {templates.map((template) => {
+        const validationError = validateTemplate(template, exercises);
+        return (
         <View key={template.id} style={styles.templateCard}>
           <View style={styles.cardHeader}>
             <View style={styles.headingColumn}>
@@ -57,14 +62,14 @@ export function WorkoutTemplateLibrary({
             <Text style={styles.listLabel}>Übungsliste</Text>
             {template.exercises.map((templateExercise, index) => (
               <View
-                key={templateExercise.exerciseId}
+                key={`${templateExercise.exerciseId}-${index}`}
                 style={styles.exerciseRow}
               >
                 <View style={styles.exerciseNameRow}>
                   <Text style={styles.exerciseNumber}>{index + 1}</Text>
                   <Text style={styles.exerciseName}>
                     {exerciseNames.get(templateExercise.exerciseId) ??
-                      templateExercise.exerciseId}
+                      "Übung fehlt im geladenen Katalog"}
                   </Text>
                 </View>
                 <Text style={styles.exercisePrescription}>
@@ -76,13 +81,16 @@ export function WorkoutTemplateLibrary({
 
           <TouchableOpacity
             accessibilityRole="button"
+            accessibilityLabel={`${template.name} übernehmen`}
+            disabled={Boolean(validationError)}
             onPress={() => onAdoptTemplate(template)}
             style={styles.adoptButton}
           >
             <Text style={styles.adoptButtonText}>Vorlage übernehmen</Text>
           </TouchableOpacity>
+          {validationError ? <Text accessibilityRole="alert" style={styles.goalText}>{validationError}</Text> : null}
         </View>
-      ))}
+      ); })}
     </ScrollView>
   );
 }
