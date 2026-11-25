@@ -7,7 +7,11 @@ const base = process.env.APP_URL || 'http://localhost:8091';
 const output = path.resolve(__dirname, '../../test-results/browser');
 
 async function appChecks(page) {
+  await page.clock.setFixedTime(new Date(2026, 10, 25, 12));
   await page.goto(base);
+  assert.equal(await page.getByRole('tab', { name: 'Kalender' }).count(), 0);
+  await page.getByRole('button', { name: 'Demo öffnen' }).click({ timeout: 120000 });
+  await page.getByRole('tab', { name: 'Ernährung' }).click();
   const nutrition = page.getByRole('textbox', {name:'Ernährungstipps suchen'});
   await nutrition.waitFor({timeout:120000});
   await nutrition.fill('xxxxx'); await page.getByText(/Kein Ernährungstipp gefunden/).waitFor();
@@ -20,6 +24,7 @@ async function appChecks(page) {
   await page.getByRole('button',{name:'Ernährungsfilter zurücksetzen',exact:true}).click();
   await page.getByText('4 von 4 Tipps',{exact:true}).waitFor();
 
+  await page.getByRole('tab', { name: 'Kalender' }).click();
   const plan = page.getByText('Pull Day',{exact:true}).locator('..');
   await plan.getByText('Auswählen',{exact:true}).click();
   const dialog = page.getByRole('dialog');
@@ -27,6 +32,7 @@ async function appChecks(page) {
   await page.getByRole('button',{name:/^Montag .* auswählen$/}).click();
   await page.getByRole('textbox',{name:'Uhrzeit für die Vorlage'}).fill('20:15');
   await page.getByRole('button',{name:'Im Kalender einplanen',exact:true}).click();
+  await page.getByRole('button',{name:'Vorhandenes Training jetzt ersetzen',exact:true}).click();
   await dialog.waitFor({state:'hidden'});
   await page.getByRole('button',{name:'Übungen für Montag bearbeiten',exact:true}).click();
   await page.getByRole('textbox',{name:'Latziehen: Sätze',exact:true}).fill('0');
@@ -54,6 +60,45 @@ async function appChecks(page) {
     await Promise.all(document.getAnimations().filter(animation=>animation.effect?.getTiming().iterations!==Infinity).map(animation=>animation.finished.catch(()=>{})));
   });
   await page.screenshot({path:path.join(output,'integrated-editor.png')});
+}
+
+async function accountChecks(page) {
+  await page.goto(base);
+  const exact = (name) => page.getByRole('button', { name, exact: true });
+  const nutrition = () => page.getByRole('tab', { name: 'Ernährung', exact: true }).click();
+  const register = async (name) => {
+    await exact('Neues Konto erstellen').click();
+    await page.getByLabel('Benutzername', { exact: true }).fill(name);
+    await page.getByLabel('E-Mail', { exact: true }).fill(`${name.toLowerCase()}@example.test`);
+    await page.getByLabel('Passwort', { exact: true }).fill('Test1234!');
+    await exact('Konto erstellen').click();
+    await page.getByText(`Hallo ${name}`, { exact: true }).waitFor();
+  };
+  const logout = async () => {
+    await exact('Profil').click();
+    await exact('Abmelden').click();
+    await exact('Anmelden').waitFor();
+  };
+
+  await exact('Anmelden').click();
+  await page.getByText('Gültige E-Mail-Adresse eingeben.', { exact: true }).waitFor();
+  await register('Alpha');
+  await nutrition();
+  await page.getByLabel('Protein in Gramm').fill('100');
+  await page.getByLabel('Kohlenhydrate in Gramm').fill('220');
+  await page.getByLabel('Fett in Gramm').fill('50');
+  await exact('Tageswerte speichern').click();
+  await page.getByText('1730 kcal', { exact: true }).waitFor();
+  await page.getByLabel('Protein in Gramm').fill('110');
+  await exact('Tageswerte speichern').click();
+  await page.getByText('1770 kcal', { exact: true }).waitFor();
+  await logout();
+  await register('Bravo');
+  await nutrition();
+  await page.getByText('Für diesen Tag gibt es noch keinen Eintrag.', { exact: true }).waitFor();
+  await page.reload();
+  await exact('Anmelden').waitFor();
+  assert.equal(await page.getByRole('tab', { name: 'Ernährung' }).count(), 0);
 }
 
 async function failureChecks(page) {
@@ -90,7 +135,7 @@ async function failureChecks(page) {
   const browser = await chromium.launch({headless:true,...(chrome?{executablePath:chrome}:{})});
   const results=[];
   try {
-    for (const [name,check] of [['integrated app',appChecks],['controlled save failures',failureChecks]]) {
+    for (const [name,check] of [['integrated app',appChecks],['controlled save failures',failureChecks],['accounts and macro tracking',accountChecks]]) {
       const page = await browser.newPage({viewport:{width:390,height:844}});
       page.setDefaultTimeout(20000);const errors=[];page.on('pageerror',error=>errors.push(error.message));
       try {await check(page);assert.deepEqual(errors,[]);results.push({name,status:'passed'});console.log(`PASS ${name}`);}
