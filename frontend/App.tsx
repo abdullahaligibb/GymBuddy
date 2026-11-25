@@ -31,6 +31,7 @@ import { createMockApi, demoLogin } from "./src/services/mockApi";
 import { useSession } from "./src/services/useSession";
 import { useTrainingData } from "./src/services/useTrainingData";
 import { ApiError } from "./src/services/api";
+import type { AppApi } from "./src/services/api";
 import { upsertWorkout, removeWorkout } from "./src/domain/workoutState";
 import {
   calculateWorkoutWeekStats,
@@ -41,9 +42,13 @@ const gymBuddyLogo = require("./assets/logo-gymbuddy.png");
 
 const tabs = ["Start", "Kalender", "Übungen", "Statistik", "Ernährung"] as const;
 type Tab = typeof tabs[number];
-const api = createMockApi();
+const mockApi = createMockApi();
 
 export default function App() {
+  return <GymBuddyApp />;
+}
+
+export function GymBuddyApp({ api = mockApi }: { api?: AppApi }) {
   const auth = useSession(api);
   if (!auth.session) {
     return <AuthScreen
@@ -52,17 +57,17 @@ export default function App() {
       error={auth.error}
       restoreFailed={auth.restoreFailed}
       onRetry={auth.restore}
-      onDemo={() => auth.authenticate(() => api.login(demoLogin))}
+      onDemo={api === mockApi ? () => auth.authenticate(() => api.login(demoLogin)) : undefined}
       onLogin={(input) => auth.authenticate(() => api.login(input))}
       onRegister={(input) => auth.authenticate(() => api.register(input))}
     />;
   }
   const { token, user } = auth.session;
-  return <TrainingApp key={token} token={token} username={user.username} endSession={auth.end} />;
+  return <TrainingApp key={token} api={api} token={token} username={user.username} endSession={auth.end} />;
 }
 
-function TrainingApp({ username, token, endSession }: {
-  username: string; token: string; endSession: (token: string, expired?: boolean) => Promise<void>;
+function TrainingApp({ api, username, token, endSession }: {
+  api: AppApi; username: string; token: string; endSession: (token: string, expired?: boolean) => Promise<void>;
 }) {
   const { data, loading, saving, error, load, mutate } = useTrainingData(api, token, endSession);
   const [tab, setTab] = useState<Tab>("Start");

@@ -12,7 +12,7 @@ type Props = {
   error: string;
   restoreFailed: boolean;
   onRetry: () => void;
-  onDemo: () => void;
+  onDemo?: () => void;
   onLogin: (input: Login) => void;
   onRegister: (input: Registration) => void;
 };
@@ -77,7 +77,7 @@ export function AuthScreen({ checking, busy, error, restoreFailed, onRetry, onDe
                   setRegistering(!registering);
                   setErrors({});
                 }} />
-                <Button label="Demo öffnen" secondary onPress={onDemo} disabled={busy} />
+                {onDemo ? <Button label="Demo öffnen" secondary onPress={onDemo} disabled={busy} /> : null}
               </>}
             </>}
           </View>

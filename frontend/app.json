@@ -17,6 +17,7 @@
         "backgroundColor": "#0B0F0E"
       }
     },
-    "icon": "./assets/logo-gymbuddy.png"
+    "icon": "./assets/logo-gymbuddy.png",
+    "plugins": ["expo-secure-store"]
   }
 }

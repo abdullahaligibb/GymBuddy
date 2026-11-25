@@ -8,7 +8,7 @@ import type { AppApi } from "./api";
 import type { Account, DailyMacroLog, HealthProfile, MacroValues, Workout, WorkoutPlan } from "../types";
 
 export const demoLogin = { email: "demo@gymbuddy.local", password: "GymBuddyDemo" };
-const demoToken = "gymbuddy-demo-session-v1";
+const sessionTtl = 24 * 60 * 60 * 1000;
 type AccountData = {
   workouts: Workout[];
   plans: WorkoutPlan[];
@@ -29,6 +29,7 @@ export function createMockApi(options: {
   const demo = { id: "demo", username: "Arion", email: demoLogin.email };
   const accounts = new Map<string, { account: Account; password: string; data: AccountData }>();
   const sessions = new Map<string, { email: string; expires: number }>();
+  const revokedDemoTokens = new Set<string>();
   let nextId = 0;
   const monday = startOfWeek(now());
   const today = toIsoDate(now());
@@ -44,18 +45,23 @@ export function createMockApi(options: {
   });
 
   function user(token: string) {
-    const session = sessions.get(token);
-    const record = accounts.get(token === demoToken ? demo.email : session?.email ?? "");
-    if (!record || (session && session.expires <= now().getTime())) {
+    const demoExpiry = /^demo-(\d+)-\d+$/.exec(token)?.[1];
+    const session = demoExpiry && !revokedDemoTokens.has(token)
+      ? { email: demo.email, expires: Number(demoExpiry) }
+      : sessions.get(token);
+    if (!session || session.expires <= now().getTime()) {
       throw new ApiError(401, "Deine Anmeldung ist abgelaufen.");
     }
+    const record = accounts.get(session.email);
+    if (!record) throw new ApiError(401, "Deine Anmeldung ist abgelaufen.");
     return record;
   }
 
   function signIn(account: Account) {
-    if (account.id === demo.id) return { token: demoToken, user: account };
-    const token = `mock-${++nextId}-${now().getTime()}`;
-    sessions.set(token, { email: account.email, expires: now().getTime() + 24 * 60 * 60 * 1000 });
+    const expires = now().getTime() + sessionTtl;
+    if (account.id === demo.id) return { token: `demo-${expires}-${++nextId}`, user: account };
+    const token = `mock-${++nextId}-${expires}`;
+    sessions.set(token, { email: account.email, expires });
     return { token, user: account };
   }
 
@@ -95,7 +101,10 @@ export function createMockApi(options: {
       return signIn(account);
     }),
     me: (token) => run("me", () => user(token).account),
-    logout: (token) => run("logout", () => { sessions.delete(token); }),
+    logout: (token) => run("logout", () => {
+      if (/^demo-\d+-\d+$/.test(token)) revokedDemoTokens.add(token);
+      sessions.delete(token);
+    }),
     listExercises: () => run("listExercises", () => exercises),
     listWorkouts: (token) => run("listWorkouts", () => user(token).data.workouts),
     saveWorkout: (token, workout) => run("saveWorkout", () => putWorkout(user(token).data, workout)),

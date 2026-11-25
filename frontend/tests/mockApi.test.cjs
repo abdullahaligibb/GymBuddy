@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { createMockApi } = require('../src/services/mockApi.ts');
+const { createMockApi, demoLogin } = require('../src/services/mockApi.ts');
 
 test('mock accounts are isolated, expired tokens are rejected and failures leave data unchanged', async () => {
   let now = new Date(2026, 0, 5, 12);
@@ -24,4 +24,16 @@ test('mock accounts are isolated, expired tokens are rejected and failures leave
   await assert.rejects(api.me(b.token), { status: 401 });
   now = new Date(2026, 0, 6, 13);
   await assert.rejects(api.me(a.token), { status: 401 });
+});
+
+test('an unexpired demo session can be checked on startup and logout revokes it in the mock', async () => {
+  let now = new Date(2026, 0, 5, 12);
+  const api = createMockApi({ now: () => now });
+  const demo = await api.login(demoLogin);
+  const restarted = createMockApi({ now: () => now });
+  assert.equal((await restarted.me(demo.token)).username, 'Arion');
+  await restarted.logout(demo.token);
+  await assert.rejects(restarted.me(demo.token), { status: 401 });
+  now = new Date(2026, 0, 6, 13);
+  await assert.rejects(api.me(demo.token), { status: 401 });
 });
