@@ -8,71 +8,44 @@ import {
   View,
 } from "react-native";
 
-import { exercises } from "../data/exercises";
-import {
-  ExerciseDifficulty,
-  ExerciseEquipment,
-  MuscleGroup,
-} from "../types";
+import { exercises as defaultExercises } from "../data/exercises";
+import { Exercise } from "../types";
+import { filterExercises, exerciseFilterOptions } from "../domain/exerciseCatalog";
 
 const ALL_FILTER = "Alle";
 
-const muscleOptions = [
-  ALL_FILTER,
-  ...Array.from(new Set(exercises.map((exercise) => exercise.muscle))).sort(),
-] as const;
-const equipmentOptions = [
-  ALL_FILTER,
-  ...Array.from(new Set(exercises.map((exercise) => exercise.equipment))).sort(),
-] as const;
-const difficultyOptions = [
-  ALL_FILTER,
-  "Einsteiger",
-  "Mittel",
-  "Fortgeschritten",
-] as const;
+type ExerciseLibraryProps = {
+  exercises?: readonly Exercise[];
+  loading?: boolean;
+  error?: string;
+  onRetry?: () => void;
+  onSelect?: (exercise: Exercise) => void;
+  selectedExerciseIds?: readonly string[];
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
+};
+const NO_SELECTION: readonly string[] = [];
 
-type AllFilter = typeof ALL_FILTER;
-
-export function ExerciseLibrary() {
+export function ExerciseLibrary({ exercises = defaultExercises, loading = false, error, onRetry, onSelect, selectedExerciseIds = NO_SELECTION, hasMore = false, loadingMore = false, onLoadMore }: ExerciseLibraryProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedMuscle, setSelectedMuscle] = useState<
-    MuscleGroup | AllFilter
+    string
   >(ALL_FILTER);
   const [selectedEquipment, setSelectedEquipment] = useState<
-    ExerciseEquipment | AllFilter
+    string
   >(ALL_FILTER);
   const [selectedDifficulty, setSelectedDifficulty] = useState<
-    ExerciseDifficulty | AllFilter
+    string
   >(ALL_FILTER);
   const [expandedExerciseId, setExpandedExerciseId] = useState<string | null>(
     null,
   );
 
-  const filteredExercises = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLocaleLowerCase("de-DE");
-
-    return exercises.filter((exercise) => {
-      const matchesSearch = exercise.name
-        .toLocaleLowerCase("de-DE")
-        .includes(normalizedSearch);
-      const matchesMuscle =
-        selectedMuscle === ALL_FILTER || exercise.muscle === selectedMuscle;
-      const matchesEquipment =
-        selectedEquipment === ALL_FILTER ||
-        exercise.equipment === selectedEquipment;
-      const matchesDifficulty =
-        selectedDifficulty === ALL_FILTER ||
-        exercise.level === selectedDifficulty;
-
-      return (
-        matchesSearch &&
-        matchesMuscle &&
-        matchesEquipment &&
-        matchesDifficulty
-      );
-    });
-  }, [
+  const options = useMemo(() => exerciseFilterOptions(exercises), [exercises]);
+  const filteredExercises = useMemo(() => filterExercises(exercises, {
+    search: searchTerm, muscle: selectedMuscle, equipment: selectedEquipment, difficulty: selectedDifficulty,
+  }), [exercises,
     searchTerm,
     selectedDifficulty,
     selectedEquipment,
@@ -88,6 +61,8 @@ export function ExerciseLibrary() {
 
   return (
     <View>
+      {loading ? <Text accessibilityLiveRegion="polite" style={styles.bodyText}>Übungen werden geladen …</Text> : null}
+      {error ? <View><Text accessibilityRole="alert" style={styles.bodyText}>{error}</Text>{onRetry ? <TouchableOpacity accessibilityRole="button" onPress={onRetry}><Text style={styles.resetText}>Erneut versuchen</Text></TouchableOpacity> : null}</View> : null}
       <TextInput
         accessibilityLabel="Übungen durchsuchen"
         autoCapitalize="none"
@@ -104,19 +79,19 @@ export function ExerciseLibrary() {
       <FilterRow
         label="Muskelgruppe"
         onSelect={setSelectedMuscle}
-        options={muscleOptions}
+        options={options.muscles}
         selected={selectedMuscle}
       />
       <FilterRow
         label="Equipment"
         onSelect={setSelectedEquipment}
-        options={equipmentOptions}
+        options={options.equipment}
         selected={selectedEquipment}
       />
       <FilterRow
         label="Schwierigkeit"
         onSelect={setSelectedDifficulty}
-        options={difficultyOptions}
+        options={options.difficulty}
         selected={selectedDifficulty}
       />
 
@@ -129,7 +104,7 @@ export function ExerciseLibrary() {
         </TouchableOpacity>
       </View>
 
-      {filteredExercises.length === 0 ? (
+      {!loading && !error && filteredExercises.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>Keine Übung gefunden</Text>
           <Text style={styles.bodyText}>
@@ -168,20 +143,23 @@ export function ExerciseLibrary() {
                     <Text style={styles.description}>{exercise.description}</Text>
                     <DetailRow
                       label="Empfehlung"
-                      text={`${exercise.recommendedSets} Sätze · ${exercise.recommendedRepetitions} Wdh.`}
+                      text={exercise.recommendedSets && exercise.recommendedRepetitions ? `${exercise.recommendedSets} Sätze · ${exercise.recommendedRepetitions} Wdh.` : "Keine Empfehlung hinterlegt."}
                     />
                     <DetailRow
                       label="Häufiger Fehler"
-                      text={exercise.commonMistake}
+                      text={exercise.commonMistake ?? "Kein Hinweis hinterlegt."}
                     />
-                    <DetailRow label="Sicherheit" text={exercise.safetyNote} />
+                    <DetailRow label="Sicherheit" text={exercise.safetyNote ?? "Kein Sicherheitshinweis hinterlegt."} />
+                    {exercise.targetMuscles?.length ? <DetailRow label="Zielmuskeln" text={exercise.targetMuscles.join(", ")} /> : null}
                   </View>
                 )}
+                {onSelect ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${exercise.name} zum Training hinzufügen`} accessibilityState={{ disabled: selectedExerciseIds.includes(exercise.id) }} disabled={selectedExerciseIds.includes(exercise.id)} onPress={() => onSelect(exercise)} style={styles.filterChip}><Text style={styles.resetText}>{selectedExerciseIds.includes(exercise.id) ? "Bereits im Training" : "Zum Training hinzufügen"}</Text></TouchableOpacity> : null}
               </View>
             );
           })}
         </View>
       )}
+      {hasMore && onLoadMore ? <TouchableOpacity accessibilityRole="button" disabled={loadingMore || loading} onPress={onLoadMore} style={styles.filterChip}><Text style={styles.resetText}>{loadingMore ? "Weitere Übungen werden geladen …" : "Weitere Übungen laden"}</Text></TouchableOpacity> : null}
     </View>
   );
 }
