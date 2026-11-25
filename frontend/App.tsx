@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  BackHandler,
   Image,
   SafeAreaView,
   ScrollView,
@@ -37,7 +38,8 @@ import {
 
 const gymBuddyLogo = require("./assets/logo-gymbuddy.png");
 
-const tabs = ["Home", "Kalender", "Übungen", "Stats"];
+const tabs = ["Start", "Kalender", "Übungen", "Statistik", "Ernährung"] as const;
+type Tab = typeof tabs[number];
 const api = createMockApi();
 
 export default function App() {
@@ -62,6 +64,8 @@ function TrainingApp({ username, token, endSession }: {
   username: string; token: string; endSession: (token: string, expired?: boolean) => Promise<void>;
 }) {
   const { data, loading, saving, error, load, mutate } = useTrainingData(api, token, endSession);
+  const [tab, setTab] = useState<Tab>("Start");
+  const [showProfile, setShowProfile] = useState(false);
   const [weekAnchor, setWeekAnchor] = useState(new Date());
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -81,6 +85,19 @@ function TrainingApp({ username, token, endSession }: {
     targetDateIso: "", activityLevel: "Leicht aktiv", primaryGoal: "Allgemeine Fitness",
     experienceLevel: "Einsteiger", weeklyWorkoutGoal: 3, preferredTrainingDays: [],
   }), [username]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (showProfile) {
+        setShowProfile(false);
+        return true;
+      }
+      if (tab === "Start") return false;
+      setTab("Start");
+      return true;
+    });
+    return () => subscription.remove();
+  }, [showProfile, tab]);
 
   if (!data) {
     return <SafeAreaView style={styles.safeArea}>
@@ -204,6 +221,7 @@ function TrainingApp({ username, token, endSession }: {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" />
       <ScrollView
+        key={showProfile ? "profile" : tab}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
@@ -219,13 +237,17 @@ function TrainingApp({ username, token, endSession }: {
               <Text style={styles.mutedText}>{formatGermanDate(now)}</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.addButton} onPress={() => openWorkoutForm()}>
-            <Text style={styles.addButtonText}>+ Training</Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            style={styles.profileButton}
+            onPress={() => { setActionError(""); setShowProfile(!showProfile); }}
+          >
+            <Text style={styles.profileButtonText}>{showProfile ? "Zurück" : "Profil"}</Text>
           </TouchableOpacity>
         </View>
         {actionError || error ? <Text accessibilityRole="alert" style={styles.error}>{actionError || error}</Text> : null}
 
-        <View style={styles.heroPanel}>
+        {!showProfile && tab === "Start" ? <View style={styles.heroPanel}>
           <Text style={styles.eyebrow}>Heute</Text>
           <Text style={styles.title}>Hallo {username}</Text>
           <Text style={styles.bodyText}>
@@ -241,8 +263,10 @@ function TrainingApp({ username, token, endSession }: {
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: progressWidth }]} />
           </View>
-        </View>
+        </View> : null}
 
+        {!showProfile && (tab === "Start" || tab === "Statistik") ? <>
+        {tab === "Statistik" ? <SectionTitle label="Training" title="Wochenstatistik" /> : null}
         <View style={styles.twoColumn}>
           <View style={styles.smallPanel}>
             <Text style={styles.eyebrow}>Streak</Text>
@@ -268,9 +292,14 @@ function TrainingApp({ username, token, endSession }: {
             {weekStats.currentStreak.longestWeeks} Wochen
           </Text>
         </View>
+        </> : null}
 
+        {!showProfile && tab === "Kalender" ? <>
         <SectionTitle label="Wochenkalender" title="Geplante Gym-Woche" />
 
+        <TouchableOpacity accessibilityRole="button" style={styles.addButton} onPress={() => openWorkoutForm()}>
+          <Text style={styles.addButtonText}>+ Training</Text>
+        </TouchableOpacity>
         <WeeklyCalendar
           workouts={weekDays}
           onDeleteWorkout={deleteWorkout}
@@ -289,7 +318,9 @@ function TrainingApp({ username, token, endSession }: {
         <SectionTitle label="Trainingspläne" title="Workout-Vorlagen" />
 
         <WorkoutPlanManager plans={plans} onSave={savePlan} onDelete={deletePlan} onUse={setTemplateToAdopt} />
+        </> : null}
 
+        {showProfile ? <>
         <SectionTitle label="Profil" title="Körper, Aktivität und Ziel" />
         <View style={styles.profilePanel}>
           {profile ? <>
@@ -301,28 +332,36 @@ function TrainingApp({ username, token, endSession }: {
             <Text style={styles.profileButtonText}>{profile ? "Profil bearbeiten" : "Profil einrichten"}</Text>
           </TouchableOpacity>
         </View>
+        <TouchableOpacity accessibilityRole="button" style={styles.profileButton} onPress={() => endSession(token)}>
+          <Text style={styles.profileButtonText}>Abmelden</Text>
+        </TouchableOpacity>
+        </> : null}
 
+        {!showProfile && tab === "Übungen" ? <>
         <SectionTitle label="Übungen" title="Übungsbibliothek" />
 
         <ExerciseLibrary exercises={exercises} />
+        </> : null}
 
+        {!showProfile && tab === "Ernährung" ? <>
         <SectionTitle label="Ernährung" title="Ernährungstipps" />
         <NutritionTipLibrary />
-        <TouchableOpacity style={styles.profileButton} onPress={() => endSession(token)}>
-          <Text style={styles.profileButtonText}>Abmelden</Text>
-        </TouchableOpacity>
+        </> : null}
       </ScrollView>
 
       <View style={styles.bottomNav}>
-        {tabs.map((tab) => (
+        {tabs.map((option) => (
           <TouchableOpacity
-            key={tab}
-            style={[styles.tabButton, tab === "Home" && styles.activeTab]}
+            key={option}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: !showProfile && option === tab }}
+            onPress={() => { setActionError(""); setTab(option); setShowProfile(false); }}
+            style={[styles.tabButton, !showProfile && option === tab && styles.activeTab]}
           >
             <Text
-              style={[styles.tabText, tab === "Home" && styles.activeTabText]}
+              style={[styles.tabText, !showProfile && option === tab && styles.activeTabText]}
             >
-              {tab}
+              {option}
             </Text>
           </TouchableOpacity>
         ))}
@@ -397,8 +436,10 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   addButton: {
+    alignSelf: "flex-start",
     backgroundColor: "#7CFF6B",
     borderRadius: 8,
+    marginBottom: 12,
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
@@ -528,9 +569,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     bottom: 0,
     flexDirection: "row",
-    gap: 8,
+    gap: 3,
     left: 0,
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingTop: 12,
     paddingBottom: 18,
     position: "absolute",
@@ -548,7 +589,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     color: "#8D9A95",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
   },
   activeTabText: {
