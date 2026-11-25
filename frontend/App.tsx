@@ -323,7 +323,7 @@ function TrainingApp({ api, username, token, endSession }: {
 
         <SectionTitle label="Trainingspläne" title="Workout-Vorlagen" />
 
-        <WorkoutPlanManager plans={plans} onSave={savePlan} onDelete={deletePlan} onUse={setTemplateToAdopt} />
+        <WorkoutPlanManager plans={plans} exercises={exercises} onSave={savePlan} onDelete={deletePlan} onUse={setTemplateToAdopt} />
         </> : null}
 
         {showProfile ? <>
@@ -400,7 +400,7 @@ function TrainingApp({ api, username, token, endSession }: {
       />
       {exerciseDay ? <WorkoutExerciseEditor key={exerciseDay.id} workout={exerciseDay} exercises={exercises} onClose={() => setExerciseDayId(undefined)} onSave={async (items) => { await persistWorkout({ ...exerciseDay, exercises: items }); }} /> : null}
 
-      <WorkoutDetailsModal visible={Boolean(detailWorkout)} workout={detailWorkout} onClose={() => { setActionError(""); setDetailDayId(undefined); }} onEdit={openWorkoutForm} onDelete={deleteWorkout} onStatus={changeStatus} saveError={actionError} />
+      <WorkoutDetailsModal exercises={exercises} visible={Boolean(detailWorkout)} workout={detailWorkout} onClose={() => { setActionError(""); setDetailDayId(undefined); }} onEdit={openWorkoutForm} onDelete={deleteWorkout} onStatus={changeStatus} saveError={actionError} />
 
       <ProfileFormModal profile={profile ?? emptyProfile} visible={isProfileOpen} onClose={() => { if (!saving) setIsProfileOpen(false); }} onSubmit={saveProfile} saving={saving} saveError={actionError} />
 

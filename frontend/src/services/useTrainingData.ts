@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, apiMessage } from "./api";
 import type { AppApi } from "./api";
 import type { DailyMacroLog, Exercise, HealthProfile, MacroValues, Workout, WorkoutPlan } from "../types";
+import { exercises as localExercises } from "../data/exercises";
+import { mergeExerciseCatalogs } from "../domain/exerciseCatalog";
 
 export type TrainingData = {
   workouts: Workout[];
@@ -34,7 +36,7 @@ export function useTrainingData(api: AppApi, token: string, onExpired: (token: s
         api.listWorkouts(token), api.listPlans(token), api.getProfile(token),
         api.listExercises(), api.getMacroTarget(token), api.listMacroLogs(token),
       ]);
-      setData({ workouts, plans, profile, exercises, macroTarget, macroLogs });
+      setData({ workouts, plans, profile, exercises: mergeExerciseCatalogs(localExercises, exercises), macroTarget, macroLogs });
     } catch (failure) {
       report(failure);
     } finally {

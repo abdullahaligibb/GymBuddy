@@ -133,6 +133,8 @@ export function WeeklyCalendar({
                 <View style={styles.actionRow}>
                   <TouchableOpacity
                     style={styles.secondaryAction}
+                    accessibilityRole="button"
+                    accessibilityLabel={isRestDay ? `Ruhetag am ${item.fullDay} bearbeiten` : `Training am ${item.fullDay} anzeigen`}
                     onPress={() => isRestDay ? onEditWorkout?.(item) : onViewWorkout?.(item)}
                   >
                     <Text style={styles.secondaryActionText}>{isRestDay ? "Bearbeiten" : "Details"}</Text>

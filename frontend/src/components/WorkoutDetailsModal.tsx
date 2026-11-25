@@ -1,16 +1,15 @@
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { exercises } from "../data/exercises";
-import { WorkoutDay, WorkoutStatus } from "../types";
-
-const names = new Map(exercises.map((item) => [item.id, item.name]));
-type Props = { workout?: WorkoutDay; visible: boolean; onClose: () => void; onEdit: (workout: WorkoutDay) => void; onDelete: (workout: WorkoutDay) => void; onStatus: (workout: WorkoutDay, status: WorkoutStatus) => void; saveError?: string };
-export function WorkoutDetailsModal({ workout, visible, onClose, onEdit, onDelete, onStatus, saveError }: Props) {
+import { exercises as defaultCatalog } from "../data/exercises";
+import { Exercise, WorkoutDay, WorkoutStatus } from "../types";
+type Props = { workout?: WorkoutDay; exercises?: readonly Exercise[]; visible: boolean; onClose: () => void; onEdit: (workout: WorkoutDay) => void; onDelete: (workout: WorkoutDay) => void; onStatus: (workout: WorkoutDay, status: WorkoutStatus) => void; saveError?: string };
+export function WorkoutDetailsModal({ workout, exercises = defaultCatalog, visible, onClose, onEdit, onDelete, onStatus, saveError }: Props) {
   if (!workout) return null;
+  const names = new Map(exercises.map((item) => [item.id, item.name]));
   return <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}><View style={styles.overlay}><View style={styles.sheet}>
     <View style={styles.header}><View style={styles.heading}><Text style={styles.eyebrow}>{workout.fullDay}, {workout.date}</Text><Text style={styles.title}>{workout.title}</Text></View><TouchableOpacity style={styles.button} onPress={onClose}><Text style={styles.buttonText}>Schliessen</Text></TouchableOpacity></View>
     <ScrollView showsVerticalScrollIndicator={false}><Text style={styles.meta}>{workout.time} · {workout.durationMinutes} Min. · {workout.type} · {workout.intensity}</Text><View style={styles.chips}>{workout.muscles.map((muscle) => <Text key={muscle} style={styles.chip}>{muscle}</Text>)}</View>
       {workout.notes ? <View style={styles.panel}><Text style={styles.label}>Notizen</Text><Text style={styles.body}>{workout.notes}</Text></View> : null}
-      <View style={styles.panel}><Text style={styles.label}>Übungsliste</Text>{workout.exercises?.length ? workout.exercises.map((item, index) => <View key={`${item.exerciseId}-${index}`} style={styles.exercise}><Text style={styles.body}>{index + 1}. {names.get(item.exerciseId) ?? item.exerciseId}</Text><Text style={styles.prescription}>{item.sets} × {item.repetitions}</Text></View>) : <Text style={styles.body}>Noch keine Übungen hinterlegt.</Text>}</View>
+      <View style={styles.panel}><Text style={styles.label}>Übungsliste</Text>{workout.exercises?.length ? workout.exercises.map((item, index) => <View key={`${item.exerciseId}-${index}`} style={styles.exercise}><Text style={styles.body}>{index + 1}. {names.get(item.exerciseId) ?? "Übung nicht im geladenen Katalog"}</Text><Text style={styles.prescription}>{item.sets} × {item.repetitions}</Text></View>) : <Text style={styles.body}>Noch keine Übungen hinterlegt.</Text>}</View>
       {saveError ? <Text accessibilityRole="alert" style={styles.deleteText}>{saveError}</Text> : null}
       {workout.status !== "ruhe" ? <><Text style={styles.label}>Status ändern</Text><View style={styles.actions}>{(["geplant", "erledigt", "verpasst"] as WorkoutStatus[]).map((status) => <TouchableOpacity key={status} style={[styles.button, workout.status === status && styles.primary]} onPress={() => onStatus(workout, status)}><Text style={[styles.buttonText, workout.status === status && styles.primaryText]}>{status[0].toUpperCase() + status.slice(1)}</Text></TouchableOpacity>)}</View></> : null}
       <TouchableOpacity style={styles.primary} onPress={() => onEdit(workout)}><Text style={styles.primaryText}>Training bearbeiten</Text></TouchableOpacity><TouchableOpacity style={styles.delete} onPress={() => onDelete(workout)}><Text style={styles.deleteText}>Training löschen</Text></TouchableOpacity>
