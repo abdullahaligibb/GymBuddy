@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -11,14 +11,17 @@ import {
   View,
 } from "react-native";
 
-import { WorkoutDay, WorkoutTemplate } from "../types";
+import { Exercise, WorkoutDay, WorkoutTemplate } from "../types";
+import { exercises as defaultCatalog } from "../data/exercises";
+import { createWorkoutFromTemplate, isFreeCalendarDay } from "../domain/workoutTemplates";
 
 type TemplateAdoptionModalProps = {
   days: WorkoutDay[];
   template?: WorkoutTemplate;
   visible: boolean;
+  exercises?: readonly Exercise[];
   onClose: () => void;
-  onSubmit: (dayId: string, time: string) => void;
+  onSubmit: (dayId: string, time: string) => void | Promise<void>;
 };
 
 export function TemplateAdoptionModal({
@@ -27,21 +30,32 @@ export function TemplateAdoptionModal({
   visible,
   onClose,
   onSubmit,
+  exercises = defaultCatalog,
 }: TemplateAdoptionModalProps) {
   const [selectedDayId, setSelectedDayId] = useState(days[0]?.id ?? "");
   const [time, setTime] = useState("18:00");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [confirmReplace, setConfirmReplace] = useState(false);
+  const openedTemplate = useRef<string | undefined>(undefined);
+  const confirmedDay = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (!visible) {
+      openedTemplate.current = undefined;
       return;
     }
+    if (openedTemplate.current === template?.id) return;
+    openedTemplate.current = template?.id;
 
     const preferredDay =
-      days.find((day) => day.status === "ruhe" && day.muscles.length === 0) ??
+      days.find(isFreeCalendarDay) ??
       days[0];
     setSelectedDayId(preferredDay?.id ?? "");
     setTime(preferredDay?.time === "-" ? "18:00" : preferredDay?.time ?? "18:00");
-  }, [days, visible]);
+    setError("");
+    setConfirmReplace(false);
+  }, [days, visible, template?.id]);
 
   if (!template) {
     return null;
@@ -50,13 +64,35 @@ export function TemplateAdoptionModal({
   const selectedDay = days.find((day) => day.id === selectedDayId);
   const replacesWorkout = Boolean(
     selectedDay &&
-      !(selectedDay.status === "ruhe" && selectedDay.muscles.length === 0),
+      !isFreeCalendarDay(selectedDay),
   );
+
+  function close() { if (!saving) onClose(); }
+  async function submit() {
+    if (saving) return;
+    try {
+      createWorkoutFromTemplate(template!, selectedDay, time, exercises);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Vorlage kann nicht übernommen werden.");
+      return;
+    }
+    setError("");
+    const daySnapshot = JSON.stringify(selectedDay);
+    if (replacesWorkout && (!confirmReplace || confirmedDay.current !== daySnapshot)) {
+      confirmedDay.current = daySnapshot;
+      setConfirmReplace(true);
+      return;
+    }
+    setSaving(true);
+    try { await onSubmit(selectedDayId, time.trim()); onClose(); }
+    catch { setError("Speichern fehlgeschlagen. Deine Auswahl bleibt erhalten. Bitte erneut versuchen."); }
+    finally { setSaving(false); }
+  }
 
   return (
     <Modal
       animationType="slide"
-      onRequestClose={onClose}
+      onRequestClose={close}
       transparent
       visible={visible}
     >
@@ -70,7 +106,7 @@ export function TemplateAdoptionModal({
               <Text style={styles.eyebrow}>Vorlage übernehmen</Text>
               <Text style={styles.title}>{template.name}</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <TouchableOpacity accessibilityRole="button" disabled={saving} onPress={close} style={styles.closeButton}>
               <Text style={styles.closeButtonText}>Schließen</Text>
             </TouchableOpacity>
           </View>
@@ -86,14 +122,16 @@ export function TemplateAdoptionModal({
           >
             {days.map((day) => {
               const isSelected = day.id === selectedDayId;
-              const isFree = day.status === "ruhe" && day.muscles.length === 0;
+              const isFree = isFreeCalendarDay(day);
 
               return (
                 <TouchableOpacity
                   accessibilityRole="button"
+                  accessibilityLabel={`${day.fullDay} ${day.date} auswählen`}
+                  disabled={saving}
                   accessibilityState={{ selected: isSelected }}
                   key={day.id}
-                  onPress={() => setSelectedDayId(day.id)}
+                  onPress={() => { setSelectedDayId(day.id); setConfirmReplace(false); setError(""); }}
                   style={[styles.dayOption, isSelected && styles.activeDayOption]}
                 >
                   <Text
@@ -119,7 +157,8 @@ export function TemplateAdoptionModal({
           <Text style={styles.fieldLabel}>Uhrzeit</Text>
           <TextInput
             accessibilityLabel="Uhrzeit für die Vorlage"
-            onChangeText={setTime}
+            editable={!saving}
+            onChangeText={(value) => { setTime(value); setConfirmReplace(false); setError(""); }}
             placeholder="18:00"
             placeholderTextColor="#66736E"
             returnKeyType="done"
@@ -141,12 +180,15 @@ export function TemplateAdoptionModal({
           </View>
 
           <TouchableOpacity
-            disabled={!selectedDayId}
-            onPress={() => onSubmit(selectedDayId, time.trim() || "18:00")}
+            accessibilityRole="button"
+            disabled={!selectedDayId || saving}
+            onPress={submit}
             style={styles.confirmButton}
           >
-            <Text style={styles.confirmButtonText}>Im Kalender einplanen</Text>
+            <Text style={styles.confirmButtonText}>{saving ? "Wird gespeichert …" : confirmReplace ? "Vorhandenes Training jetzt ersetzen" : "Im Kalender einplanen"}</Text>
           </TouchableOpacity>
+          {confirmReplace && !saving ? <TouchableOpacity accessibilityRole="button" onPress={() => setConfirmReplace(false)} style={styles.closeButton}><Text style={styles.closeButtonText}>Ersetzen abbrechen</Text></TouchableOpacity> : null}
+          {error ? <Text accessibilityRole="alert" style={styles.warningText}>{error}</Text> : null}
         </View>
       </KeyboardAvoidingView>
     </Modal>

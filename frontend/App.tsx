@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  Alert,
   Image,
   SafeAreaView,
   ScrollView,
@@ -16,6 +15,8 @@ import { TemplateAdoptionModal } from "./src/components/TemplateAdoptionModal";
 import { WorkoutTemplateLibrary } from "./src/components/WorkoutTemplateLibrary";
 import { WorkoutFormModal } from "./src/components/WorkoutFormModal";
 import { WorkoutExerciseEditor } from "./src/components/WorkoutExerciseEditor";
+import { exercises } from "./src/data/exercises";
+import { createWorkoutFromTemplate } from "./src/domain/workoutTemplates";
 import { WeeklyCalendar } from "./src/components/WeeklyCalendar";
 import { nutritionTips } from "./src/data/nutritionTips";
 import { demoTodayIso, demoUser, initialStreak } from "./src/data/profile";
@@ -97,34 +98,14 @@ export default function App() {
       return;
     }
 
-    const adoptedTemplate = templateToAdopt;
-    const selectedCalendarDay = workouts.find((workout) => workout.id === dayId);
+    const adoptedWorkout = createWorkoutFromTemplate(templateToAdopt, workouts.find((workout) => workout.id === dayId), time, exercises);
 
     setWorkouts((current) =>
       current.map((workout) =>
         workout.id === dayId
-          ? {
-              ...workout,
-              title: adoptedTemplate.name,
-              time,
-              durationMinutes: adoptedTemplate.durationMinutes,
-              type: adoptedTemplate.type,
-              muscles: [...adoptedTemplate.muscles],
-              intensity: adoptedTemplate.difficulty,
-              status: "geplant",
-              notes: `Ziel: ${adoptedTemplate.goal}`,
-              sourceTemplateId: adoptedTemplate.id,
-              exercises: adoptedTemplate.exercises.map((exercise) => ({
-                ...exercise,
-              })),
-            }
+          ? adoptedWorkout
           : workout,
       ),
-    );
-    setTemplateToAdopt(undefined);
-    Alert.alert(
-      "Vorlage übernommen",
-      `${adoptedTemplate.name} wurde für ${selectedCalendarDay?.fullDay ?? "den gewählten Tag"} eingeplant.`,
     );
   }
 
