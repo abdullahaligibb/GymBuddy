@@ -15,6 +15,7 @@ import { ExerciseLibrary } from "./src/components/ExerciseLibrary";
 import { TemplateAdoptionModal } from "./src/components/TemplateAdoptionModal";
 import { WorkoutTemplateLibrary } from "./src/components/WorkoutTemplateLibrary";
 import { WorkoutFormModal } from "./src/components/WorkoutFormModal";
+import { WorkoutExerciseEditor } from "./src/components/WorkoutExerciseEditor";
 import { WeeklyCalendar } from "./src/components/WeeklyCalendar";
 import { nutritionTips } from "./src/data/nutritionTips";
 import { demoTodayIso, demoUser, initialStreak } from "./src/data/profile";
@@ -36,6 +37,8 @@ export default function App() {
   const [workouts, setWorkouts] = useState<WorkoutDay[]>(initialWorkouts);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<WorkoutDay | undefined>();
+  const [exerciseDayId, setExerciseDayId] = useState<string>();
+  const exerciseDay = workouts.find((day) => day.id === exerciseDayId);
   const [templateToAdopt, setTemplateToAdopt] = useState<
     WorkoutTemplate | undefined
   >();
@@ -210,6 +213,7 @@ export default function App() {
           workouts={workouts}
           onDeleteWorkout={deleteWorkout}
           onEditWorkout={openWorkoutForm}
+          onEditExercises={(day) => setExerciseDayId(day.id)}
           onMarkDone={markWorkoutDone}
           onPlanDay={openWorkoutForm}
         />
@@ -253,6 +257,7 @@ export default function App() {
         onClose={closeWorkoutForm}
         onSubmit={saveWorkout}
       />
+      {exerciseDay ? <WorkoutExerciseEditor key={exerciseDay.id} workout={exerciseDay} onClose={() => setExerciseDayId(undefined)} onSave={(exercises) => setWorkouts((items) => items.map((day) => day.id === exerciseDay.id ? { ...day, exercises } : day))} /> : null}
 
       <TemplateAdoptionModal
         days={workouts}
