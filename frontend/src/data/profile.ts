@@ -20,6 +20,7 @@ export const initialStreak: Streak = {
 
 export const initialHealthProfile: HealthProfile = {
   name: "Arion",
+  energyFormula: "male",
   birthDateIso: "2008-04-16",
   heightCm: 178,
   weightKg: 61,

@@ -21,6 +21,12 @@ export function ProfileFormModal({ profile, visible, onClose, onSubmit, saving, 
     <View style={styles.grid}><View style={styles.column}><Field label="Zielgewicht (kg) *" value={String(draft.targetWeightKg || "")} keyboardType="decimal-pad" onChangeText={(v) => number("targetWeightKg", v)} error={errors.targetWeightKg}/></View><View style={styles.column}><Field label="Zieldatum *" value={draft.targetDateIso} onChangeText={(v) => text("targetDateIso", v)} error={errors.targetDateIso}/></View></View>
     <Label text="Aktivitätsniveau"/><Options values={activities} selected={draft.activityLevel} onSelect={(v) => setDraft({...draft, activityLevel:v})}/><Label text="Primäres Ziel"/><Options values={goals} selected={draft.primaryGoal} onSelect={(v) => setDraft({...draft, primaryGoal:v})}/><Label text="Erfahrungsniveau"/><Options values={levels} selected={draft.experienceLevel} onSelect={(v) => setDraft({...draft, experienceLevel:v})}/>
     <Field label="Trainingsziel pro Woche *" value={String(draft.weeklyWorkoutGoal || "")} keyboardType="number-pad" onChangeText={(v) => number("weeklyWorkoutGoal", v)} error={errors.weeklyWorkoutGoal}/><Label text="Bevorzugte Trainingstage *"/><View style={styles.options}>{days.map((day) => <Chip key={day} label={day} active={draft.preferredTrainingDays.includes(day)} onPress={() => toggleDay(day)}/>)}</View>{errors.preferredTrainingDays ? <Text style={styles.error}>{errors.preferredTrainingDays}</Text> : null}
+    <Label text="Variante für Makroziele"/>
+    <View style={styles.options}>
+      <Chip label="Nicht gewählt" active={!draft.energyFormula} onPress={() => setDraft({ ...draft, energyFormula: undefined })} />
+      <Chip label="Weibliche Formel" active={draft.energyFormula === "female"} onPress={() => setDraft({ ...draft, energyFormula: "female" })} />
+      <Chip label="Männliche Formel" active={draft.energyFormula === "male"} onPress={() => setDraft({ ...draft, energyFormula: "male" })} />
+    </View>
     {saveError ? <Text accessibilityRole="alert" style={styles.error}>{saveError}</Text> : null}
     <TouchableOpacity disabled={saving} style={styles.save} onPress={submit}><Text style={styles.saveText}>{saving ? "Wird gespeichert …" : "Profil speichern"}</Text></TouchableOpacity>
   </ScrollView></View></KeyboardAvoidingView></Modal>;

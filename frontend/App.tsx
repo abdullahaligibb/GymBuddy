@@ -14,6 +14,7 @@ import {
 
 import { ExerciseLibrary } from "./src/components/ExerciseLibrary";
 import { AuthScreen } from "./src/components/AuthScreen";
+import { MacroTracker } from "./src/components/MacroTracker";
 import { ProfileFormModal } from "./src/components/ProfileFormModal";
 import { TemplateAdoptionModal } from "./src/components/TemplateAdoptionModal";
 import { WorkoutDetailsModal } from "./src/components/WorkoutDetailsModal";
@@ -344,6 +345,22 @@ function TrainingApp({ username, token, endSession }: {
         </> : null}
 
         {!showProfile && tab === "Ernährung" ? <>
+        <MacroTracker
+          profile={profile}
+          target={data.macroTarget}
+          logs={data.macroLogs}
+          busy={saving}
+          onProfile={() => setShowProfile(true)}
+          onSaveTarget={(target) => mutate(() => api.saveMacroTarget(token, target), (current, saved) => ({
+            ...current, macroTarget: saved,
+          }))}
+          onSaveLog={(log) => mutate(() => api.saveMacroLog(token, log), (current, saved) => ({
+            ...current, macroLogs: [...current.macroLogs.filter((item) => item.dateIso !== saved.dateIso), saved],
+          }))}
+          onDeleteLog={(date) => mutate(() => api.deleteMacroLog(token, date), (current) => ({
+            ...current, macroLogs: current.macroLogs.filter((item) => item.dateIso !== date),
+          }))}
+        />
         <SectionTitle label="Ernährung" title="Ernährungstipps" />
         <NutritionTipLibrary />
         </> : null}
