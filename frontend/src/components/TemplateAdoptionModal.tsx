@@ -100,7 +100,7 @@ export function TemplateAdoptionModal({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.overlay}
       >
-        <View style={styles.sheet}>
+        <ScrollView style={styles.sheet} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
             <View style={styles.headingColumn}>
               <Text style={styles.eyebrow}>Vorlage übernehmen</Text>
@@ -177,6 +177,7 @@ export function TemplateAdoptionModal({
               {template.durationMinutes} Min. · {template.exercises.length} Übungen
             </Text>
             <Text style={styles.summaryText}>{template.goal}</Text>
+            {template.exercises.map((item, index) => <Text key={`${item.exerciseId}-${index}`} style={styles.summaryText}>{index + 1}. {exercises.find((exercise) => exercise.id === item.exerciseId)?.name ?? "Übung fehlt im geladenen Katalog"} · {item.sets} × {item.repetitions}</Text>)}
           </View>
 
           <TouchableOpacity
@@ -189,7 +190,7 @@ export function TemplateAdoptionModal({
           </TouchableOpacity>
           {confirmReplace && !saving ? <TouchableOpacity accessibilityRole="button" onPress={() => setConfirmReplace(false)} style={styles.closeButton}><Text style={styles.closeButtonText}>Ersetzen abbrechen</Text></TouchableOpacity> : null}
           {error ? <Text accessibilityRole="alert" style={styles.warningText}>{error}</Text> : null}
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -202,6 +203,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
+    maxHeight: "94%",
     backgroundColor: "#0F1514",
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,

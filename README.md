@@ -28,5 +28,9 @@ Für ein Gerät: `npm start` im Frontend ausführen und die Hinweise von Expo ve
 - [Bedienungsanleitung](docs/user-guide.md)
 - [Testnachweise und offene Abnahme](docs/testing.md)
 - [Vorbereitung der Projektpräsentation](docs/presentation.md)
+- [Aktueller Realisierungsstand als Word-Dokument](docs/school/GymBuddy_Realisierungsstand_IM24A.docx)
+- [Aktualisierter Projektplan als Word-Dokument](docs/school/GymBuddy_Projektplan_IM24A.docx)
+
+Zu beiden Word-Dokumenten liegt im gleichen Ordner eine geprüfte PDF-Ausgabe vor.
 
 Die historischen Konzept- und Testkonzeptunterlagen bleiben als damaliger Planungsstand erhalten. Die aktuelle Backend-Erweiterung und die Abweichungen zur ursprünglich lokalen Speicherung sind in der Architektur dokumentiert. Ein vollständiger Abschluss des Gesamtprojekts ist noch nicht nachgewiesen.
