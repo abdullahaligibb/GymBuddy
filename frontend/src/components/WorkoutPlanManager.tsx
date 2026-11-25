@@ -1,27 +1,86 @@
 import { useState } from "react";
 import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { ExerciseLibrary } from "./ExerciseLibrary";
-import { WorkoutPlan, WorkoutType } from "../types";
+import type { Exercise, WorkoutFocus, WorkoutPlan } from "../types";
+import { exercises as defaultCatalog } from "../data/exercises";
+import { toPlanDraft, validatePlanDraft } from "../domain/workoutPlans";
+import { ExerciseDraftList } from "./ExerciseDraftList";
 
-type Props={plans:WorkoutPlan[];onSave:(plan:WorkoutPlan)=>void | Promise<void>;onDelete:(plan:WorkoutPlan)=>void;onUse:(plan:WorkoutPlan)=>void};
-export function WorkoutPlanManager({plans,onSave,onDelete,onUse}:Props){const [editing,setEditing]=useState<WorkoutPlan>();const [creating,setCreating]=useState(false);const open=(plan?:WorkoutPlan)=>{setEditing(plan??{id:`plan-${Date.now()}`,name:"",type:"Full Body",durationMinutes:60,goal:"",difficulty:"Mittel",muscles:["Ganzkörper"],exercises:[],isCustom:true});setCreating(!plan)};return <View><TouchableOpacity style={styles.newButton} onPress={()=>open()}><Text style={styles.newText}>+ Neuen Trainingsplan anlegen</Text></TouchableOpacity><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.list}>{plans.map(plan=><View key={plan.id} style={styles.card}><Text style={styles.title}>{plan.name}</Text><Text style={styles.body}>{plan.goal}</Text><Text style={styles.meta}>{plan.durationMinutes} Min. · {plan.type} · {plan.exercises.length} Übungen</Text><View style={styles.row}><TouchableOpacity style={styles.button} onPress={()=>open(plan)}><Text style={styles.buttonText}>Bearbeiten</Text></TouchableOpacity><TouchableOpacity style={styles.primary} onPress={()=>onUse(plan)}><Text style={styles.primaryText}>Auswählen</Text></TouchableOpacity></View>{plan.isCustom?<TouchableOpacity onPress={()=>onDelete(plan)}><Text style={styles.delete}>Plan löschen</Text></TouchableOpacity>:null}</View>)}</ScrollView>{editing ? <PlanModal key={editing.id} plan={editing} creating={creating} onClose={()=>setEditing(undefined)} onSave={onSave}/> : null}</View>}
-function PlanModal({plan,creating,onClose,onSave}:{plan:WorkoutPlan;creating:boolean;onClose:()=>void;onSave:(p:WorkoutPlan)=>void | Promise<void>}){const [draft,setDraft]=useState(plan);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  function close() { if (!saving) onClose(); }
-  async function save() {
-    if (saving || !valid) return;
-    setSaving(true);
-    setError("");
-    try {
-      await onSave({ ...draft, name: draft.name.trim(), goal: draft.goal.trim(), isCustom: true });
-      onClose();
-    } catch {
-      setError("Speichern fehlgeschlagen. Deine Eingaben bleiben erhalten.");
-    } finally {
-      setSaving(false);
-    }
+type Props = {
+  plans: WorkoutPlan[];
+  exercises?: readonly Exercise[];
+  onSave: (plan: WorkoutPlan) => void | Promise<void>;
+  onDelete: (plan: WorkoutPlan) => void;
+  onUse: (plan: WorkoutPlan) => void;
+};
+
+export function WorkoutPlanManager({ plans, exercises = defaultCatalog, onSave, onDelete, onUse }: Props) {
+  const [editing, setEditing] = useState<WorkoutPlan>();
+  const [creating, setCreating] = useState(false);
+  function open(plan?: WorkoutPlan) {
+    setEditing(plan ?? { id: `plan-${Date.now()}`, name: "", type: "Full Body", durationMinutes: 60, goal: "", difficulty: "Mittel", muscles: ["Ganzkörper"], exercises: [], isCustom: true });
+    setCreating(!plan);
   }
-  const valid=draft.name.trim()&&draft.goal.trim()&&Number.isInteger(draft.durationMinutes)&&draft.durationMinutes>=5;return <Modal animationType="slide" transparent visible onRequestClose={close}><View style={styles.overlay}><View style={styles.sheet}><View style={styles.header}><Text style={styles.modalTitle}>{creating?"Trainingsplan anlegen":"Trainingsplan bearbeiten"}</Text><TouchableOpacity style={styles.button} onPress={close}><Text style={styles.buttonText}>Schliessen</Text></TouchableOpacity></View><ScrollView keyboardShouldPersistTaps="handled"><Label text="Name *"/><TextInput style={styles.input} value={draft.name} onChangeText={name=>setDraft({...draft,name})}/><Label text="Ziel *"/><TextInput style={styles.input} value={draft.goal} onChangeText={goal=>setDraft({...draft,goal})}/><Label text="Dauer in Minuten *"/><TextInput keyboardType="number-pad" style={styles.input} value={String(draft.durationMinutes)} onChangeText={v=>setDraft({...draft,durationMinutes:Number(v)||0})}/><Label text="Trainingsart"/><View style={styles.row}>{(["Push","Pull","Legs","Full Body","Upper Body","Lower Body","Cardio"] as Exclude<WorkoutType,"Mobility"|"Rest Day">[]).map(type=><TouchableOpacity key={type} style={[styles.button,draft.type===type&&styles.primary]} onPress={()=>setDraft({...draft,type})}><Text style={[styles.buttonText,draft.type===type&&styles.primaryText]}>{type}</Text></TouchableOpacity>)}</View><Label text="Übungen"/><ExerciseLibrary onSelect={exercise=>setDraft({...draft,exercises:[...draft.exercises,{exerciseId:exercise.id,sets:3,repetitions:"8-12",restSeconds:90}]})} selectedExerciseIds={draft.exercises.map(item=>item.exerciseId)}/>{error ? <Text accessibilityRole="alert" style={styles.delete}>{error}</Text> : null}<TouchableOpacity disabled={!valid || saving} style={[styles.primary,(!valid || saving)&&{opacity:.4},styles.save]} onPress={save}><Text style={styles.primaryText}>{saving ? "Wird gespeichert …" : "Plan speichern"}</Text></TouchableOpacity></ScrollView></View></View></Modal>}
-function Label({text}:{text:string}){return <Text style={styles.label}>{text}</Text>};
-const styles=StyleSheet.create({newButton:{alignItems:"center",borderColor:"#7CFF6B",borderRadius:8,borderWidth:1,justifyContent:"center",marginBottom:12,minHeight:46},newText:{color:"#7CFF6B",fontWeight:"900"},list:{gap:12,paddingRight:20},card:{backgroundColor:"#111716",borderColor:"rgba(255,255,255,.08)",borderRadius:8,borderWidth:1,padding:16,width:300},title:{color:"#F4F7F5",fontSize:19,fontWeight:"900"},body:{color:"#B9C4BF",lineHeight:20,marginTop:7},meta:{color:"#8D9A95",fontSize:12,marginVertical:14},row:{flexDirection:"row",flexWrap:"wrap",gap:8},button:{alignItems:"center",backgroundColor:"#18201E",borderRadius:8,justifyContent:"center",minHeight:42,paddingHorizontal:12},buttonText:{color:"#DCE5E1",fontWeight:"800"},primary:{alignItems:"center",backgroundColor:"#7CFF6B",borderRadius:8,justifyContent:"center",minHeight:42,paddingHorizontal:12},primaryText:{color:"#0B0F0E",fontWeight:"900"},delete:{color:"#FF9A9D",fontWeight:"800",marginTop:14},overlay:{backgroundColor:"rgba(0,0,0,.68)",flex:1,justifyContent:"flex-end"},sheet:{backgroundColor:"#0F1514",borderTopLeftRadius:18,borderTopRightRadius:18,maxHeight:"94%",padding:20},header:{alignItems:"center",flexDirection:"row",justifyContent:"space-between"},modalTitle:{color:"#F4F7F5",fontSize:22,fontWeight:"900"},label:{color:"#DCE5E1",fontSize:13,fontWeight:"900",marginBottom:8,marginTop:14},input:{backgroundColor:"#111716",borderColor:"rgba(255,255,255,.1)",borderRadius:8,borderWidth:1,color:"#F4F7F5",minHeight:48,paddingHorizontal:13},save:{marginBottom:30,marginTop:20}});
+  return <View>
+    <Action label="+ Neuen Trainingsplan anlegen" onPress={() => open()} />
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.list}>
+      {plans.map((plan) => <View key={plan.id} style={s.card}>
+        <Text style={s.title}>{plan.name}</Text><Text style={s.body}>{plan.goal}</Text>
+        <Text style={s.body}>{plan.durationMinutes} Min. · {plan.type} · {plan.exercises.length} Übungen</Text>
+        <View style={s.row}><Action label="Bearbeiten" name={`${plan.name} bearbeiten`} onPress={() => open(plan)} /><Action label="Auswählen" name={`${plan.name} auswählen`} onPress={() => onUse(plan)} /></View>
+        {plan.isCustom ? <Action label="Plan löschen" name={`${plan.name} löschen`} onPress={() => onDelete(plan)} /> : null}
+      </View>)}
+    </ScrollView>
+    {editing ? <PlanModal key={editing.id} plan={editing} creating={creating} catalog={exercises} onClose={() => setEditing(undefined)} onSave={onSave} /> : null}
+  </View>;
+}
+
+function PlanModal({ plan, creating, catalog, onClose, onSave }: { plan: WorkoutPlan; creating: boolean; catalog: readonly Exercise[]; onClose: () => void; onSave: Props["onSave"] }) {
+  const [initial] = useState(() => toPlanDraft(plan));
+  const [draft, setDraft] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [discard, setDiscard] = useState(false);
+  const dirty = JSON.stringify(initial) !== JSON.stringify(draft);
+  function close() { if (!saving) { if (dirty) setDiscard(true); else onClose(); } }
+  async function save() {
+    if (saving) return;
+    const result = validatePlanDraft(draft, catalog);
+    setErrors(result.errors); setMessage(result.message ?? "");
+    if (!result.value) return;
+    setSaving(true);
+    try { await onSave(result.value); onClose(); }
+    catch { setMessage("Speichern fehlgeschlagen. Deine Eingaben bleiben erhalten."); }
+    finally { setSaving(false); }
+  }
+  const muscleOptions: WorkoutFocus[] = ["Brust", "Rücken", "Beine", "Schulter", "Bizeps", "Trizeps", "Bauch", "Waden", "Gesäß", "Ganzkörper", "Cardio"];
+  return <Modal animationType="slide" transparent visible onRequestClose={close}>
+    <View style={s.overlay}><View style={s.sheet}>
+      <View style={s.row}><Text style={s.title}>{creating ? "Trainingsplan anlegen" : "Trainingsplan bearbeiten"}</Text><Action label="Schliessen" disabled={saving} onPress={close} /></View>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.content}>
+        {discard ? <View style={s.notice}><Text style={s.body}>Ungespeicherte Planänderungen verwerfen?</Text><Action label="Weiter bearbeiten" onPress={() => setDiscard(false)} /><Action label="Planänderungen verwerfen" onPress={onClose} /></View> : null}
+        <Field label="Planname" value={draft.name} disabled={saving} onChange={(name) => setDraft({ ...draft, name })} />
+        <Field label="Planziel" value={draft.goal} disabled={saving} onChange={(goal) => setDraft({ ...draft, goal })} />
+        <Field label="Plandauer in Minuten" value={draft.duration} disabled={saving} onChange={(duration) => setDraft({ ...draft, duration })} />
+        <Text style={s.label}>Trainingsart</Text><View style={s.row}>{(["Push", "Pull", "Legs", "Full Body", "Upper Body", "Lower Body", "Cardio"] as const).map((type) => <Action key={type} label={type} name={`Planart ${type}`} selected={draft.type === type} disabled={saving} onPress={() => setDraft({ ...draft, type })} />)}</View>
+        <Text style={s.label}>Intensität</Text><View style={s.row}>{(["Leicht", "Mittel", "Schwer"] as const).map((difficulty) => <Action key={difficulty} label={difficulty} name={`Planintensität ${difficulty}`} selected={draft.difficulty === difficulty} disabled={saving} onPress={() => setDraft({ ...draft, difficulty })} />)}</View>
+        <Text style={s.label}>Muskelgruppen</Text><View style={s.row}>{muscleOptions.map((muscle) => <Action key={muscle} label={muscle} name={`Planmuskel ${muscle}`} selected={draft.muscles.includes(muscle)} disabled={saving} onPress={() => setDraft({ ...draft, muscles: draft.muscles.includes(muscle) ? draft.muscles.filter((item) => item !== muscle) : [...draft.muscles, muscle] })} />)}</View>
+        <ExerciseDraftList value={draft.exercises} catalog={catalog} errors={errors} disabled={saving} onChange={(exercises) => { setDraft({ ...draft, exercises }); setErrors({}); setMessage(""); }} />
+        {message ? <Text accessibilityRole="alert" style={s.error}>{message}</Text> : null}
+        <Action label={saving ? "Wird gespeichert …" : "Plan speichern"} disabled={saving} onPress={save} />
+      </ScrollView>
+    </View></View>
+  </Modal>;
+}
+
+function Field({ label, value, disabled, onChange }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void }) {
+  return <View><Text style={s.label}>{label}</Text><TextInput accessibilityLabel={label} editable={!disabled} style={s.input} value={value} onChangeText={onChange} /></View>;
+}
+function Action({ label, name = label, selected, disabled = false, onPress }: { label: string; name?: string; selected?: boolean; disabled?: boolean; onPress: () => void }) {
+  return <TouchableOpacity accessibilityRole="button" accessibilityLabel={name} accessibilityState={{ disabled, ...(selected === undefined ? {} : { selected }) }} disabled={disabled} onPress={onPress} style={[s.button, selected && s.selected, disabled && { opacity: 0.4 }]}><Text style={[s.buttonText, selected && { color: "#0B100F" }]}>{label}</Text></TouchableOpacity>;
+}
+const s = StyleSheet.create({
+  list: { gap: 12, paddingVertical: 12 }, card: { backgroundColor: "#111716", borderRadius: 10, padding: 16, width: 300, gap: 12 }, title: { color: "#F4F7F5", fontSize: 20, fontWeight: "800", flexShrink: 1 },
+  body: { color: "#B9C4BF", lineHeight: 21 }, row: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }, button: { backgroundColor: "#25372B", padding: 12, minHeight: 44, borderRadius: 8, justifyContent: "center" }, buttonText: { color: "#A4FF89", fontWeight: "800" }, selected: { backgroundColor: "#7CFF6B" },
+  overlay: { backgroundColor: "rgba(0,0,0,.68)", flex: 1, justifyContent: "flex-end" }, sheet: { backgroundColor: "#0F1514", borderTopLeftRadius: 18, borderTopRightRadius: 18, maxHeight: "94%", padding: 20 }, content: { gap: 14, paddingBottom: 30 }, label: { color: "#DCE5E1", fontWeight: "800", marginVertical: 8 }, input: { backgroundColor: "#111716", borderColor: "#45554C", borderWidth: 1, borderRadius: 8, color: "#FFF", minHeight: 48, padding: 12 }, error: { color: "#FFB5A5", lineHeight: 21 }, notice: { gap: 10, paddingVertical: 12 },
+});

@@ -14,6 +14,11 @@ export function validateTemplate(template: WorkoutTemplate, catalog: readonly Ex
   if (!Number.isInteger(template.durationMinutes) || template.durationMinutes < 1 || template.durationMinutes > 600) {
     return "Vorlagendauer muss zwischen 1 und 600 Minuten liegen.";
   }
+  if (!template.goal.trim() || template.goal.trim().length > 300) return "Ziel muss 1 bis 300 Zeichen enthalten.";
+  if (!["Leicht", "Mittel", "Schwer"].includes(template.difficulty)) return "Bitte eine gültige Intensität wählen.";
+  if (!["Push", "Pull", "Legs", "Full Body", "Upper Body", "Lower Body", "Cardio"].includes(template.type)) return "Bitte eine gültige Trainingsart wählen.";
+  const allowedMuscles = ["Bauch", "Beine", "Bizeps", "Brust", "Ganzkörper", "Gesäß", "Rücken", "Schulter", "Trizeps", "Waden", "Cardio", "Regeneration"];
+  if (!template.muscles.length || template.muscles.some((muscle) => !allowedMuscles.includes(muscle))) return "Bitte mindestens eine gültige Muskelgruppe wählen.";
   if (!template.exercises.length) return "Die Vorlage enthält keine Übungen.";
   const checked = validateExerciseDrafts(template.exercises.map(toExerciseDraft), catalog);
   if (!checked.value) return Object.values(checked.errors).flat().join(" ");
