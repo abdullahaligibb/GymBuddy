@@ -7,21 +7,22 @@ const activities: ActivityLevel[] = ["Wenig aktiv", "Leicht aktiv", "Moderat akt
 const goals: TrainingGoal[] = ["Muskelaufbau", "Kraftaufbau", "Fettabbau", "Allgemeine Fitness"];
 const levels: ExperienceLevel[] = ["Einsteiger", "Mittel", "Fortgeschritten"];
 const days = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
-type Props = { profile: HealthProfile; visible: boolean; onClose: () => void; onSubmit: (profile: HealthProfile) => void };
-export function ProfileFormModal({ profile, visible, onClose, onSubmit }: Props) {
+type Props = { profile: HealthProfile; visible: boolean; onClose: () => void; onSubmit: (profile: HealthProfile) => void; saving?: boolean; saveError?: string };
+export function ProfileFormModal({ profile, visible, onClose, onSubmit, saving, saveError }: Props) {
   const [draft, setDraft] = useState(profile); const [errors, setErrors] = useState<Record<string,string>>({});
   useEffect(() => { if (visible) { setDraft(profile); setErrors({}); } }, [profile, visible]);
   function text(key: keyof HealthProfile, value: string) { setDraft((current) => ({ ...current, [key]: value })); }
   function number(key: keyof HealthProfile, value: string) { setDraft((current) => ({ ...current, [key]: Number(value) || 0 })); }
   function toggleDay(day: string) { setDraft((current) => ({ ...current, preferredTrainingDays: current.preferredTrainingDays.includes(day) ? current.preferredTrainingDays.filter((item) => item !== day) : [...current.preferredTrainingDays, day] })); }
-  function submit() { const next = validateHealthProfile(draft); setErrors(next); if (!Object.keys(next).length) onSubmit(draft); }
+  function submit() { if (saving) return; const next = validateHealthProfile(draft); setErrors(next); if (!Object.keys(next).length) onSubmit(draft); }
   return <Modal animationType="slide" transparent visible={visible} onRequestClose={onClose}><KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.overlay}><View style={styles.sheet}><View style={styles.header}><Text style={styles.title}>Profil bearbeiten</Text><TouchableOpacity style={styles.chip} onPress={onClose}><Text style={styles.chipText}>Schliessen</Text></TouchableOpacity></View><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
     <Field label="Name *" value={draft.name} onChangeText={(v) => text("name", v)} error={errors.name}/><Field label="Geburtsdatum (JJJJ-MM-TT) *" value={draft.birthDateIso} onChangeText={(v) => text("birthDateIso", v)} error={errors.birthDateIso}/>
     <View style={styles.grid}><View style={styles.column}><Field label="Grösse (cm) *" value={String(draft.heightCm || "")} keyboardType="number-pad" onChangeText={(v) => number("heightCm", v)} error={errors.heightCm}/></View><View style={styles.column}><Field label="Gewicht (kg) *" value={String(draft.weightKg || "")} keyboardType="decimal-pad" onChangeText={(v) => number("weightKg", v)} error={errors.weightKg}/></View></View>
     <View style={styles.grid}><View style={styles.column}><Field label="Zielgewicht (kg) *" value={String(draft.targetWeightKg || "")} keyboardType="decimal-pad" onChangeText={(v) => number("targetWeightKg", v)} error={errors.targetWeightKg}/></View><View style={styles.column}><Field label="Zieldatum *" value={draft.targetDateIso} onChangeText={(v) => text("targetDateIso", v)} error={errors.targetDateIso}/></View></View>
     <Label text="Aktivitätsniveau"/><Options values={activities} selected={draft.activityLevel} onSelect={(v) => setDraft({...draft, activityLevel:v})}/><Label text="Primäres Ziel"/><Options values={goals} selected={draft.primaryGoal} onSelect={(v) => setDraft({...draft, primaryGoal:v})}/><Label text="Erfahrungsniveau"/><Options values={levels} selected={draft.experienceLevel} onSelect={(v) => setDraft({...draft, experienceLevel:v})}/>
     <Field label="Trainingsziel pro Woche *" value={String(draft.weeklyWorkoutGoal || "")} keyboardType="number-pad" onChangeText={(v) => number("weeklyWorkoutGoal", v)} error={errors.weeklyWorkoutGoal}/><Label text="Bevorzugte Trainingstage *"/><View style={styles.options}>{days.map((day) => <Chip key={day} label={day} active={draft.preferredTrainingDays.includes(day)} onPress={() => toggleDay(day)}/>)}</View>{errors.preferredTrainingDays ? <Text style={styles.error}>{errors.preferredTrainingDays}</Text> : null}
-    <TouchableOpacity style={styles.save} onPress={submit}><Text style={styles.saveText}>Profil speichern</Text></TouchableOpacity>
+    {saveError ? <Text accessibilityRole="alert" style={styles.error}>{saveError}</Text> : null}
+    <TouchableOpacity disabled={saving} style={styles.save} onPress={submit}><Text style={styles.saveText}>{saving ? "Wird gespeichert …" : "Profil speichern"}</Text></TouchableOpacity>
   </ScrollView></View></KeyboardAvoidingView></Modal>;
 }
 function Label({text}:{text:string}){return <Text style={styles.label}>{text}</Text>};

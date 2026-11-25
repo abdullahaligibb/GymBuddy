@@ -11,6 +11,7 @@ export function useSession(api: AppApi) {
   const [error, setError] = useState("");
   const [restoreFailed, setRestoreFailed] = useState(false);
   const running = useRef(false);
+  const pendingErase = useRef(false);
 
   const restore = useCallback(async () => {
     if (running.current) return;
@@ -19,6 +20,11 @@ export function useSession(api: AppApi) {
     setRestoreFailed(false);
     setError("");
     try {
+      if (pendingErase.current) {
+        await tokenStorage.clear();
+        pendingErase.current = false;
+        return;
+      }
       const token = await tokenStorage.read();
       if (token) setSession({ token, user: await api.me(token) });
     } catch (failure) {
@@ -62,7 +68,8 @@ export function useSession(api: AppApi) {
     try {
       await tokenStorage.clear();
     } catch {
-      setError("Die Sitzung konnte nicht vom Gerät entfernt werden. Bitte erneut abmelden.");
+      pendingErase.current = true;
+      setError("Die Sitzung konnte nicht vom Gerät entfernt werden.");
       setRestoreFailed(true);
     }
     try {

@@ -49,7 +49,7 @@ export function AuthScreen({ checking, busy, error, restoreFailed, onRetry, onDe
             {checking ? <ActivityIndicator color="#7CFF6B" accessibilityLabel="Sitzung wird geprüft" /> : <>
               {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
               {restoreFailed ? (
-                <Button label="Sitzung erneut prüfen" onPress={onRetry} disabled={busy} />
+                <Button label="Erneut versuchen" onPress={onRetry} disabled={busy} />
               ) : <>
                 <Text style={styles.heading}>{registering ? "Konto erstellen" : "Anmelden"}</Text>
                 {fields.map(({ id, label }) => (

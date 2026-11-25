@@ -5,13 +5,13 @@ import { isFutureDate } from "../domain/calendar";
 import { hasValidationErrors, validateRestDay, validateWorkoutDraft } from "../domain/workoutForm";
 import { WorkoutDay, WorkoutFocus, WorkoutIntensity, WorkoutStatus, WorkoutType } from "../types";
 
-type Props = { visible: boolean; dayTemplates: WorkoutDay[]; selectedDay?: WorkoutDay; onClose: () => void; onSubmit: (workout: WorkoutDay) => void };
+type Props = { visible: boolean; dayTemplates: WorkoutDay[]; selectedDay?: WorkoutDay; onClose: () => void; onSubmit: (workout: WorkoutDay) => void; saving?: boolean; saveError?: string };
 const workoutTypes: Exclude<WorkoutType, "Rest Day">[] = ["Push", "Pull", "Legs", "Full Body", "Upper Body", "Lower Body", "Cardio", "Mobility"];
 const intensities: WorkoutIntensity[] = ["Leicht", "Mittel", "Schwer"];
 const statuses: Exclude<WorkoutStatus, "ruhe" | "ungeplant">[] = ["geplant", "erledigt", "verpasst"];
 const muscles: WorkoutFocus[] = ["Brust", "Rücken", "Beine", "Schulter", "Bizeps", "Trizeps", "Bauch", "Waden", "Cardio"];
 
-export function WorkoutFormModal({ visible, dayTemplates, selectedDay, onClose, onSubmit }: Props) {
+export function WorkoutFormModal({ visible, dayTemplates, selectedDay, onClose, onSubmit, saving, saveError }: Props) {
   const fallback = selectedDay ?? dayTemplates[0];
   const [dayId, setDayId] = useState(fallback?.id ?? "");
   const [mode, setMode] = useState<"training" | "rest">("training");
@@ -41,7 +41,7 @@ export function WorkoutFormModal({ visible, dayTemplates, selectedDay, onClose, 
 
   const target = dayTemplates.find((day) => day.id === dayId) ?? fallback;
   function submit() {
-    if (!target) return;
+    if (!target || saving) return;
     const nextErrors = mode === "rest"
       ? (validateRestDay(target.dateIso, "ruhe") ? {} : { dateIso: "Bitte einen gültigen Tag auswählen." })
       : validateWorkoutDraft({ dateIso: target.dateIso, title, time, duration, type, muscles: selectedMuscles, intensity, status, notes });
@@ -65,7 +65,8 @@ export function WorkoutFormModal({ visible, dayTemplates, selectedDay, onClose, 
           <Label text="Muskelgruppen *"/><View style={styles.row}>{muscles.map((value) => <Chip key={value} label={value} active={selectedMuscles.includes(value)} onPress={() => toggleMuscle(value)}/>)}</View>{errors.muscles ? <Text style={styles.error}>{errors.muscles}</Text> : null}
         </> : <Text style={styles.hint}>Der Tag wird als Regenerationstag gespeichert. Ein bestehendes Training wird erst nach deiner Bestätigung ersetzt.</Text>}
         <Label text="Notizen"/><TextInput multiline value={notes} onChangeText={setNotes} placeholder="Optional" placeholderTextColor="#66736E" style={[styles.input, styles.notes]}/>
-        <TouchableOpacity style={styles.save} onPress={submit}><Text style={styles.saveText}>{mode === "rest" ? "Ruhetag speichern" : "Training speichern"}</Text></TouchableOpacity>
+        {saveError ? <Text accessibilityRole="alert" style={styles.error}>{saveError}</Text> : null}
+        <TouchableOpacity disabled={saving} style={[styles.save, saving && styles.disabled]} onPress={submit}><Text style={styles.saveText}>{saving ? "Wird gespeichert …" : mode === "rest" ? "Ruhetag speichern" : "Training speichern"}</Text></TouchableOpacity>
       </ScrollView>
     </View></KeyboardAvoidingView>
   </Modal>;

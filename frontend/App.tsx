@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  Alert,
+  ActivityIndicator,
   Image,
   SafeAreaView,
   ScrollView,
@@ -12,6 +12,7 @@ import {
 } from "react-native";
 
 import { ExerciseLibrary } from "./src/components/ExerciseLibrary";
+import { AuthScreen } from "./src/components/AuthScreen";
 import { ProfileFormModal } from "./src/components/ProfileFormModal";
 import { TemplateAdoptionModal } from "./src/components/TemplateAdoptionModal";
 import { WorkoutDetailsModal } from "./src/components/WorkoutDetailsModal";
@@ -20,13 +21,15 @@ import { WorkoutExerciseEditor } from "./src/components/WorkoutExerciseEditor";
 import { WorkoutPlanManager } from "./src/components/WorkoutPlanManager";
 import { WeeklyCalendar } from "./src/components/WeeklyCalendar";
 import { NutritionTipLibrary } from "./src/components/NutritionTipLibrary";
-import { exercises } from "./src/data/exercises";
-import { demoUser, initialHealthProfile, initialStreak } from "./src/data/profile";
-import { workoutTemplates } from "./src/data/templates";
+import { confirmAction } from "./src/components/feedback";
 import { addDays, formatWeekRange, getWeekDays, isFutureDate, toIsoDate } from "./src/domain/calendar";
 import { createWorkoutFromTemplate } from "./src/domain/workoutTemplates";
-import { initialWorkouts } from "./src/data/workouts";
 import { HealthProfile, WorkoutDay, WorkoutPlan, WorkoutStatus, WorkoutTemplate } from "./src/types";
+import { createMockApi, demoLogin } from "./src/services/mockApi";
+import { useSession } from "./src/services/useSession";
+import { useTrainingData } from "./src/services/useTrainingData";
+import { ApiError } from "./src/services/api";
+import { upsertWorkout, removeWorkout } from "./src/domain/workoutState";
 import {
   calculateWorkoutWeekStats,
   formatGermanDate,
@@ -35,28 +38,69 @@ import {
 const gymBuddyLogo = require("./assets/logo-gymbuddy.png");
 
 const tabs = ["Home", "Kalender", "Übungen", "Stats"];
+const api = createMockApi();
 
 export default function App() {
-  const [workouts, setWorkouts] = useState<WorkoutDay[]>(initialWorkouts);
+  const auth = useSession(api);
+  if (!auth.session) {
+    return <AuthScreen
+      checking={auth.checking}
+      busy={auth.busy}
+      error={auth.error}
+      restoreFailed={auth.restoreFailed}
+      onRetry={auth.restore}
+      onDemo={() => auth.authenticate(() => api.login(demoLogin))}
+      onLogin={(input) => auth.authenticate(() => api.login(input))}
+      onRegister={(input) => auth.authenticate(() => api.register(input))}
+    />;
+  }
+  const { token, user } = auth.session;
+  return <TrainingApp key={token} token={token} username={user.username} endSession={auth.end} />;
+}
+
+function TrainingApp({ username, token, endSession }: {
+  username: string; token: string; endSession: (token: string, expired?: boolean) => Promise<void>;
+}) {
+  const { data, loading, saving, error, load, mutate } = useTrainingData(api, token, endSession);
   const [weekAnchor, setWeekAnchor] = useState(new Date());
-  const [profile, setProfile] = useState<HealthProfile>(initialHealthProfile);
-  const [plans, setPlans] = useState<WorkoutPlan[]>(workoutTemplates);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState<WorkoutDay | undefined>();
   const [exerciseDayId, setExerciseDayId] = useState<string>();
-  const exerciseDay = workouts.find((day) => day.id === exerciseDayId);
-  const [detailWorkout, setDetailWorkout] = useState<WorkoutDay | undefined>();
+  const [detailDayId, setDetailDayId] = useState<string>();
+  const [actionError, setActionError] = useState("");
   const [templateToAdopt, setTemplateToAdopt] = useState<
     WorkoutTemplate | undefined
   >();
 
   const now = new Date();
   const todayIso = toIsoDate(now);
-  const weekDays = getWeekDays(weekAnchor, workouts);
+  const weekDays = useMemo(() => getWeekDays(weekAnchor, data?.workouts ?? []), [weekAnchor, data?.workouts]);
+  const emptyProfile = useMemo<HealthProfile>(() => ({
+    name: username, birthDateIso: "", heightCm: 0, weightKg: 0, targetWeightKg: 0,
+    targetDateIso: "", activityLevel: "Leicht aktiv", primaryGoal: "Allgemeine Fitness",
+    experienceLevel: "Einsteiger", weeklyWorkoutGoal: 3, preferredTrainingDays: [],
+  }), [username]);
+
+  if (!data) {
+    return <SafeAreaView style={styles.safeArea}>
+      <View style={styles.scrollContent}>
+        <Text style={styles.brand}>Gym Buddy</Text>
+        {loading ? <ActivityIndicator color="#7CFF6B" accessibilityLabel="Daten werden geladen" /> : <>
+          <Text accessibilityRole="alert" style={styles.error}>{error}</Text>
+          <TouchableOpacity style={styles.profileButton} onPress={load}><Text style={styles.profileButtonText}>Erneut versuchen</Text></TouchableOpacity>
+        </>}
+        <TouchableOpacity style={styles.profileButton} onPress={() => endSession(token)}><Text style={styles.profileButtonText}>Abmelden</Text></TouchableOpacity>
+      </View>
+    </SafeAreaView>;
+  }
+  const { workouts, plans, profile, exercises } = data;
+  const exerciseDay = workouts.find((day) => day.id === exerciseDayId);
+  const detailWorkout = workouts.find((day) => day.id === detailDayId);
 
   function openWorkoutForm(day?: WorkoutDay) {
-    setDetailWorkout(undefined);
+    setDetailDayId(undefined);
+    setActionError("");
     setSelectedDay(day ?? weekDays.find((item) => item.dateIso === todayIso) ?? weekDays[0]);
     setIsFormOpen(true);
   }
@@ -66,61 +110,89 @@ export default function App() {
     setSelectedDay(undefined);
   }
 
-  function commitWorkout(workout: WorkoutDay) {
-    setWorkouts((current) => [...current.filter((item) => item.dateIso !== workout.dateIso), workout]);
-    closeWorkoutForm();
+  function persistWorkout(workout: WorkoutDay) {
+    return mutate(() => api.saveWorkout(token, workout), (current, saved) => ({
+      ...current, workouts: upsertWorkout(current.workouts, saved),
+    }));
   }
 
-  function saveWorkout(workout: WorkoutDay) {
+  async function saveWorkout(workout: WorkoutDay) {
+    if (saving) return;
     const existing = workouts.find((item) => item.dateIso === workout.dateIso);
-    const replacesContent = existing && existing.status !== "ungeplant" && (existing.status !== workout.status || existing.title !== workout.title || existing.id !== selectedDay?.id);
-    if (replacesContent) {
-      Alert.alert("Eintrag ersetzen?", `Für ${existing.fullDay} besteht bereits «${existing.title}».`, [{ text: "Abbrechen", style: "cancel" }, { text: "Ersetzen", style: "destructive", onPress: () => commitWorkout(workout) }]);
+    const replaces = existing && (existing.id !== selectedDay?.id || (existing.status === "ruhe") !== (workout.status === "ruhe"));
+    if (replaces && !await confirmAction("Eintrag ersetzen?", `Für ${existing.fullDay} besteht bereits «${existing.title}».`, "Ersetzen")) return;
+    try {
+      setActionError("");
+      await persistWorkout(workout);
+      closeWorkoutForm();
+    } catch (failure) {
+      setActionError(failure instanceof ApiError ? failure.message : "Speichern fehlgeschlagen. Deine Eingaben bleiben erhalten.");
+    }
+  }
+
+  async function changeStatus(workout: WorkoutDay, status: WorkoutStatus) {
+    if (saving) return;
+    if (isFutureDate(workout.dateIso) && status !== "geplant") {
+      setActionError("Zukünftige Trainings können nur als geplant markiert werden.");
       return;
     }
-    commitWorkout(workout);
-  }
-
-  function changeStatus(workout: WorkoutDay, status: WorkoutStatus) {
-    if (isFutureDate(workout.dateIso) && status !== "geplant") { Alert.alert("Status nicht möglich", "Zukünftige Trainings können noch nicht als erledigt oder verpasst markiert werden."); return; }
-    setWorkouts((current) => current.map((item) => item.dateIso === workout.dateIso ? { ...item, status } : item));
-    setDetailWorkout((current) => current?.dateIso === workout.dateIso ? { ...current, status } : current);
-  }
-
-  function deleteWorkout(workout: WorkoutDay) {
-    Alert.alert("Eintrag löschen?", `«${workout.title}» wird aus dem Kalender entfernt.`, [{ text: "Abbrechen", style: "cancel" }, { text: "Löschen", style: "destructive", onPress: () => { setWorkouts((current) => current.filter((item) => item.dateIso !== workout.dateIso)); setDetailWorkout(undefined); } }]);
-  }
-
-  function adoptTemplate(dayId: string, time: string) {
-    if (!templateToAdopt) {
-      return;
-    }
-
-    const adoptedTemplate = templateToAdopt;
-    const selectedCalendarDay = weekDays.find((workout) => workout.id === dayId);
-
-    if (!selectedCalendarDay) return;
-    const adoptedWorkout = createWorkoutFromTemplate(
-      adoptedTemplate,
-      selectedCalendarDay,
-      time,
-      exercises,
-    );
-    setWorkouts((current) => [
-      ...current.filter((workout) => workout.dateIso !== selectedCalendarDay.dateIso),
-      adoptedWorkout,
-    ]);
-    setTemplateToAdopt(undefined);
-    Alert.alert(
-      "Vorlage übernommen",
-      `${adoptedTemplate.name} wurde für ${selectedCalendarDay?.fullDay ?? "den gewählten Tag"} eingeplant.`,
+    setActionError("");
+    await present(
+      mutate(() => api.setStatus(token, workout, status), (current, saved) => ({
+        ...current, workouts: upsertWorkout(current.workouts, saved),
+      })),
     );
   }
 
+  async function present(request: Promise<unknown>, onSuccess?: () => void) {
+    try {
+      await request;
+      onSuccess?.();
+    } catch (failure) {
+      setActionError(failure instanceof ApiError ? failure.message : "Verbindung fehlgeschlagen. Bitte erneut versuchen.");
+    }
+  }
+
+  async function deleteWorkout(workout: WorkoutDay) {
+    if (saving || !await confirmAction("Eintrag löschen?", `«${workout.title}» wird aus dem Kalender entfernt.`, "Löschen")) return;
+    setActionError("");
+    await present(mutate(() => api.deleteWorkout(token, workout), (current) => ({
+      ...current, workouts: removeWorkout(current.workouts, workout.dateIso),
+    })), () => setDetailDayId(undefined));
+  }
+
+  async function adoptTemplate(dayId: string, time: string) {
+    const day = weekDays.find((workout) => workout.id === dayId);
+    if (!day || !templateToAdopt) throw new ApiError(400, "Vorlage oder Tag fehlt.");
+    await persistWorkout(createWorkoutFromTemplate(templateToAdopt, day, time, exercises));
+  }
+
+  async function savePlan(plan: WorkoutPlan) {
+    await mutate(() => api.savePlan(token, plan), (current, saved) => ({
+      ...current, plans: [...current.plans.filter((item) => item.id !== saved.id), saved],
+    }));
+  }
+
+  async function deletePlan(plan: WorkoutPlan) {
+    if (saving || !await confirmAction("Plan löschen?", `«${plan.name}» wird entfernt.`, "Löschen")) return;
+    setActionError("");
+    await present(mutate(() => api.deletePlan(token, plan), (current) => ({
+      ...current, plans: current.plans.filter((item) => item.id !== plan.id),
+    })));
+  }
+
+  function saveProfile(next: HealthProfile) {
+    setActionError("");
+    return present(mutate(() => api.saveProfile(token, next), (current, saved) => ({
+      ...current, profile: saved,
+    })), () => setIsProfileOpen(false));
+  }
+
+  const goal = profile?.weeklyWorkoutGoal ?? emptyProfile.weeklyWorkoutGoal;
   const weekStats = calculateWorkoutWeekStats(
     workouts,
-    profile,
-    initialStreak.longestWeeks,
+    { weeklyWorkoutGoal: goal },
+    0,
     now,
   );
   const progressWidth = `${weekStats.weeklyGoalPercent}%` as `${number}%`;
@@ -151,18 +223,19 @@ export default function App() {
             <Text style={styles.addButtonText}>+ Training</Text>
           </TouchableOpacity>
         </View>
+        {actionError || error ? <Text accessibilityRole="alert" style={styles.error}>{actionError || error}</Text> : null}
 
         <View style={styles.heroPanel}>
           <Text style={styles.eyebrow}>Heute</Text>
-          <Text style={styles.title}>Hey {demoUser.name}, dein Aufbau läuft.</Text>
+          <Text style={styles.title}>Hallo {username}</Text>
           <Text style={styles.bodyText}>
-            {demoUser.goal} · {demoUser.experienceLevel} · {demoUser.split}
+            {profile ? `${profile.primaryGoal} · ${profile.experienceLevel}` : "Profil noch nicht eingerichtet"}
           </Text>
           <Text style={styles.nextWorkoutText}>Nächstes Training: {nextWorkoutLabel}</Text>
           <View style={styles.progressRow}>
             <Text style={styles.bodyText}>Wochenziel</Text>
             <Text style={styles.metricText}>
-              {weekStats.completedWorkouts} / {profile.weeklyWorkoutGoal}
+              {weekStats.completedWorkouts} / {goal}
             </Text>
           </View>
           <View style={styles.progressTrack}>
@@ -205,7 +278,7 @@ export default function App() {
           onEditExercises={(day) => setExerciseDayId(day.id)}
           onMarkDone={(workout) => changeStatus(workout, "erledigt")}
           onPlanDay={openWorkoutForm}
-          onViewWorkout={setDetailWorkout}
+          onViewWorkout={(workout) => { setActionError(""); setDetailDayId(workout.id); }}
           onPreviousWeek={() => setWeekAnchor((date) => addDays(date, -7))}
           onNextWeek={() => setWeekAnchor((date) => addDays(date, 7))}
           onToday={() => setWeekAnchor(new Date())}
@@ -215,17 +288,29 @@ export default function App() {
 
         <SectionTitle label="Trainingspläne" title="Workout-Vorlagen" />
 
-        <WorkoutPlanManager plans={plans} onSave={(plan) => setPlans((current) => [...current.filter((item) => item.id !== plan.id), plan])} onDelete={(plan) => Alert.alert("Plan löschen?", `«${plan.name}» wird entfernt.`, [{text:"Abbrechen",style:"cancel"},{text:"Löschen",style:"destructive",onPress:()=>setPlans((current)=>current.filter((item)=>item.id!==plan.id))}])} onUse={setTemplateToAdopt} />
+        <WorkoutPlanManager plans={plans} onSave={savePlan} onDelete={deletePlan} onUse={setTemplateToAdopt} />
 
         <SectionTitle label="Profil" title="Körper, Aktivität und Ziel" />
-        <View style={styles.profilePanel}><Text style={styles.sectionHeading}>{profile.name}</Text><Text style={styles.bodyText}>{profile.heightCm} cm · {profile.weightKg} kg · Ziel {profile.targetWeightKg} kg</Text><Text style={styles.bodyText}>{profile.activityLevel} · {profile.primaryGoal} · {profile.weeklyWorkoutGoal} Trainings pro Woche</Text><TouchableOpacity style={styles.profileButton} onPress={() => setIsProfileOpen(true)}><Text style={styles.profileButtonText}>Profil bearbeiten</Text></TouchableOpacity></View>
+        <View style={styles.profilePanel}>
+          {profile ? <>
+            <Text style={styles.sectionHeading}>{profile.name}</Text>
+            <Text style={styles.bodyText}>{profile.heightCm} cm · {profile.weightKg} kg · Ziel {profile.targetWeightKg} kg</Text>
+            <Text style={styles.bodyText}>{profile.activityLevel} · {profile.primaryGoal} · {goal} Trainings pro Woche</Text>
+          </> : <Text style={styles.bodyText}>Du hast noch kein Profil angelegt.</Text>}
+          <TouchableOpacity style={styles.profileButton} onPress={() => { setActionError(""); setIsProfileOpen(true); }}>
+            <Text style={styles.profileButtonText}>{profile ? "Profil bearbeiten" : "Profil einrichten"}</Text>
+          </TouchableOpacity>
+        </View>
 
         <SectionTitle label="Übungen" title="Übungsbibliothek" />
 
-        <ExerciseLibrary />
+        <ExerciseLibrary exercises={exercises} />
 
         <SectionTitle label="Ernährung" title="Ernährungstipps" />
         <NutritionTipLibrary />
+        <TouchableOpacity style={styles.profileButton} onPress={() => endSession(token)}>
+          <Text style={styles.profileButtonText}>Abmelden</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       <View style={styles.bottomNav}>
@@ -247,20 +332,23 @@ export default function App() {
         dayTemplates={weekDays}
         selectedDay={selectedDay}
         visible={isFormOpen}
-        onClose={closeWorkoutForm}
+        onClose={() => { if (!saving) closeWorkoutForm(); }}
         onSubmit={saveWorkout}
+        saving={saving}
+        saveError={actionError}
       />
-      {exerciseDay ? <WorkoutExerciseEditor key={exerciseDay.id} workout={exerciseDay} onClose={() => setExerciseDayId(undefined)} onSave={(exercises) => setWorkouts((items) => items.map((day) => day.id === exerciseDay.id ? { ...day, exercises } : day))} /> : null}
+      {exerciseDay ? <WorkoutExerciseEditor key={exerciseDay.id} workout={exerciseDay} exercises={exercises} onClose={() => setExerciseDayId(undefined)} onSave={async (items) => { await persistWorkout({ ...exerciseDay, exercises: items }); }} /> : null}
 
-      <WorkoutDetailsModal visible={Boolean(detailWorkout)} workout={detailWorkout} onClose={() => setDetailWorkout(undefined)} onEdit={openWorkoutForm} onDelete={deleteWorkout} onStatus={changeStatus} />
+      <WorkoutDetailsModal visible={Boolean(detailWorkout)} workout={detailWorkout} onClose={() => { setActionError(""); setDetailDayId(undefined); }} onEdit={openWorkoutForm} onDelete={deleteWorkout} onStatus={changeStatus} saveError={actionError} />
 
-      <ProfileFormModal profile={profile} visible={isProfileOpen} onClose={() => setIsProfileOpen(false)} onSubmit={(next) => { setProfile(next); setIsProfileOpen(false); }} />
+      <ProfileFormModal profile={profile ?? emptyProfile} visible={isProfileOpen} onClose={() => { if (!saving) setIsProfileOpen(false); }} onSubmit={saveProfile} saving={saving} saveError={actionError} />
 
       <TemplateAdoptionModal
         days={weekDays}
         onClose={() => setTemplateToAdopt(undefined)}
         onSubmit={adoptTemplate}
         template={templateToAdopt}
+        exercises={exercises}
         visible={Boolean(templateToAdopt)}
       />
     </SafeAreaView>
@@ -349,6 +437,10 @@ const styles = StyleSheet.create({
     color: "#B9C4BF",
     fontSize: 14,
     lineHeight: 20,
+  },
+  error: {
+    color: "#FF9A9D",
+    marginVertical: 10,
   },
   nextWorkoutText: {
     color: "#DCE5E1",
