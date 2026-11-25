@@ -1,137 +1,106 @@
-import { Streak, User, Workout } from "../types";
+import { addDays, parseIsoDate, startOfWeek, toIsoDate } from "../domain/calendar";
+import type { Streak, User, Workout } from "../types";
 
-export type WorkoutWeekStats = {
-  trainingsThisWeek: number;
-  completedWorkouts: number;
-  totalTrainingTime: number;
-  weeklyGoalPercent: number;
-  nextWorkout?: Workout;
-  currentStreak: Streak;
-};
-
-function parseDate(dateIso: string) {
-  return new Date(`${dateIso}T00:00:00`);
+function isTraining(workout: Workout) {
+  return workout.type !== "Rest Day" &&
+    ["geplant", "erledigt", "verpasst"].includes(workout.status) &&
+    Number.isFinite(workout.durationMinutes) && workout.durationMinutes > 0;
 }
 
-function getStartOfWeek(date: Date) {
-  const start = new Date(date);
-  const day = start.getDay() === 0 ? 7 : start.getDay();
-  start.setDate(start.getDate() - day + 1);
-  start.setHours(0, 0, 0, 0);
-
-  return start;
-}
-
-function getEndOfWeek(date: Date) {
-  const end = getStartOfWeek(date);
-  end.setDate(end.getDate() + 6);
-  end.setHours(23, 59, 59, 999);
-
-  return end;
-}
-
-function isInRange(dateIso: string, start: Date, end: Date) {
-  const date = parseDate(dateIso);
-
-  return date >= start && date <= end;
-}
-
-function isTrainingWorkout(workout: Workout) {
-  return workout.type !== "Rest Day" && workout.durationMinutes > 0;
-}
-
-function getWorkoutDateTime(workout: Workout) {
-  const fallbackTime = workout.time === "-" ? "00:00" : workout.time;
-
-  return new Date(`${workout.dateIso}T${fallbackTime}:00`);
+function workoutTime(workout: Workout) {
+  const time = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(workout.time);
+  if (!time) return NaN;
+  const date = parseIsoDate(workout.dateIso);
+  return date.setHours(Number(time[1]), Number(time[2]), 0, 0);
 }
 
 export function calculateCurrentStreak(
   workouts: Workout[],
-  weeklyWorkoutGoal: number,
-  longestWeeks: number,
+  goal: number,
+  previousRecord: number,
   today = new Date(),
 ): Streak {
-  const todayStart = new Date(today);
-  todayStart.setHours(23, 59, 59, 999);
+  const todayIso = toIsoDate(today);
+  const monday = startOfWeek(today);
+  const mondayIso = toIsoDate(monday);
+  const counts = new Map<string, Set<string>>();
+  const past = workouts.filter(isTraining)
+    .filter((item) => item.dateIso <= todayIso && ["erledigt", "verpasst"].includes(item.status))
+    .sort((a, b) => b.dateIso.localeCompare(a.dateIso));
+  const consecutive = new Set<string>();
+  let broken = false;
+  for (const item of past) {
+    if (item.status === "verpasst") broken = true;
+    if (item.status !== "erledigt") continue;
+    if (!broken) consecutive.add(item.dateIso);
+    const week = toIsoDate(startOfWeek(parseIsoDate(item.dateIso)));
+    const dates = counts.get(week) ?? new Set<string>();
+    dates.add(item.dateIso);
+    counts.set(week, dates);
+  }
 
-  const pastTrainingWorkouts = workouts
-    .filter((workout) => isTrainingWorkout(workout))
-    .filter((workout) => parseDate(workout.dateIso) <= todayStart)
-    .sort((first, second) => getWorkoutDateTime(second).getTime() - getWorkoutDateTime(first).getTime());
+  const target = Number.isInteger(goal) && goal > 0 ? goal : Infinity;
+  const qualified = [...counts].filter(([, dates]) => dates.size >= target)
+    .map(([week]) => week).sort();
+  const qualifiedWeeks = new Set(qualified);
+  let cursor = qualifiedWeeks.has(mondayIso) ? monday : addDays(monday, -7);
+  let currentWeeks = 0;
+  while (qualifiedWeeks.has(toIsoDate(cursor))) {
+    currentWeeks++;
+    cursor = addDays(cursor, -7);
+  }
 
-  let currentTrainingDays = 0;
-  let lastCompletedWorkoutDateIso: string | undefined;
-
-  for (const workout of pastTrainingWorkouts) {
-    if (workout.status !== "erledigt") {
-      break;
-    }
-
-    currentTrainingDays += 1;
-    lastCompletedWorkoutDateIso = lastCompletedWorkoutDateIso ?? workout.dateIso;
+  let longestWeeks = previousRecord;
+  let run = 0;
+  let previousDate: string | undefined;
+  for (const week of qualified) {
+    run = previousDate === toIsoDate(addDays(parseIsoDate(week), -7)) ? run + 1 : 1;
+    longestWeeks = Math.max(longestWeeks, run);
+    previousDate = week;
   }
 
   return {
-    currentTrainingDays,
-    currentWeeks: Math.floor(currentTrainingDays / weeklyWorkoutGoal),
+    currentWeeks,
+    currentTrainingDays: consecutive.size,
     longestWeeks,
-    lastCompletedWorkoutDateIso,
+    lastCompletedWorkoutDateIso: past.find((item) => item.status === "erledigt")?.dateIso,
   };
 }
 
 export function calculateWorkoutWeekStats(
   workouts: Workout[],
-  user: User,
+  user: Pick<User, "weeklyWorkoutGoal">,
   longestStreakWeeks: number,
   today = new Date(),
-): WorkoutWeekStats {
-  const weekStart = getStartOfWeek(today);
-  const weekEnd = getEndOfWeek(today);
-  const todayStart = new Date(today);
-  todayStart.setHours(0, 0, 0, 0);
-
-  const workoutsThisWeek = workouts.filter((workout) =>
-    isInRange(workout.dateIso, weekStart, weekEnd),
-  );
-  const trainingWorkoutsThisWeek = workoutsThisWeek.filter(isTrainingWorkout);
-  const completedWorkouts = trainingWorkoutsThisWeek.filter(
-    (workout) => workout.status === "erledigt",
-  );
-  const nextWorkout = trainingWorkoutsThisWeek
-    .filter((workout) => workout.status === "geplant")
-    .filter((workout) => getWorkoutDateTime(workout) >= todayStart)
-    .sort((first, second) => getWorkoutDateTime(first).getTime() - getWorkoutDateTime(second).getTime())[0];
+) {
+  const monday = startOfWeek(today);
+  const start = toIsoDate(monday);
+  const end = toIsoDate(addDays(monday, 7));
+  const todayIso = toIsoDate(today);
+  const training = workouts.filter(isTraining);
+  const thisWeek = training.filter((item) => item.dateIso >= start && item.dateIso < end);
+  const done = thisWeek.filter((item) => item.status === "erledigt" && item.dateIso <= todayIso);
+  const next = training.filter((item) => item.status === "geplant")
+    .map((item) => ({ item, time: workoutTime(item) }))
+    .filter(({ time }) => time >= today.getTime())
+    .sort((a, b) => a.time - b.time)[0];
 
   return {
-    trainingsThisWeek: trainingWorkoutsThisWeek.length,
-    completedWorkouts: completedWorkouts.length,
-    totalTrainingTime: completedWorkouts.reduce(
-      (sum, workout) => sum + workout.durationMinutes,
-      0,
-    ),
-    weeklyGoalPercent: Math.min(
-      (completedWorkouts.length / user.weeklyWorkoutGoal) * 100,
-      100,
-    ),
-    nextWorkout,
-    currentStreak: calculateCurrentStreak(
-      workouts,
-      user.weeklyWorkoutGoal,
-      longestStreakWeeks,
-      today,
-    ),
+    trainingsThisWeek: thisWeek.length,
+    completedWorkouts: done.length,
+    totalTrainingTime: done.reduce((sum, workout) => sum + workout.durationMinutes, 0),
+    weeklyGoalPercent: user.weeklyWorkoutGoal > 0
+      ? Math.min(100, (done.length / user.weeklyWorkoutGoal) * 100)
+      : 0,
+    nextWorkout: next?.item,
+    currentStreak: calculateCurrentStreak(workouts, user.weeklyWorkoutGoal, longestStreakWeeks, today),
   };
 }
 
 export function formatGermanDate(date: Date) {
-  return new Intl.DateTimeFormat("de-DE", {
+  return new Intl.DateTimeFormat("de-CH", {
     day: "numeric",
     month: "long",
     weekday: "long",
   }).format(date);
-}
-
-export function parseDemoDate(dateIso: string) {
-  return parseDate(dateIso);
 }

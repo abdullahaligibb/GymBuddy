@@ -118,8 +118,8 @@ export default function App() {
   }
 
   const weekStats = calculateWorkoutWeekStats(
-    weekDays,
-    demoUser,
+    workouts,
+    profile,
     initialStreak.longestWeeks,
     now,
   );
@@ -162,7 +162,7 @@ export default function App() {
           <View style={styles.progressRow}>
             <Text style={styles.bodyText}>Wochenziel</Text>
             <Text style={styles.metricText}>
-              {weekStats.completedWorkouts} / {demoUser.weeklyWorkoutGoal}
+              {weekStats.completedWorkouts} / {profile.weeklyWorkoutGoal}
             </Text>
           </View>
           <View style={styles.progressTrack}>
@@ -174,9 +174,9 @@ export default function App() {
           <View style={styles.smallPanel}>
             <Text style={styles.eyebrow}>Streak</Text>
             <Text style={styles.bigNumber}>
-              {weekStats.currentStreak.currentTrainingDays}
+              {weekStats.currentStreak.currentWeeks}
             </Text>
-            <Text style={styles.bodyText}>Trainings in Folge</Text>
+            <Text style={styles.bodyText}>Wochen am Stück</Text>
           </View>
           <View style={styles.smallPanel}>
             <Text style={styles.eyebrow}>Trainingszeit</Text>
@@ -188,7 +188,7 @@ export default function App() {
         <View style={styles.profilePanel}>
           <Text style={styles.eyebrow}>Diese Woche</Text>
           <Text style={styles.sectionHeading}>
-            {weekStats.trainingsThisWeek} Trainings geplant
+            {weekStats.trainingsThisWeek} Trainings insgesamt
           </Text>
           <Text style={styles.bodyText}>
             {weekStats.completedWorkouts} erledigt · längster Streak:{" "}
