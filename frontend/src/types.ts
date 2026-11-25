@@ -85,6 +85,7 @@ export type Exercise = {
 
 export type WorkoutExercise = {
   exerciseId: Exercise["id"];
+  associationId?: string;
   sets: number;
   repetitions: string;
   weightKg?: number;
@@ -107,6 +108,7 @@ export type Workout = {
   status: WorkoutStatus;
   notes?: string;
   sourceTemplateId?: string;
+  trainingPlanId?: string;
   exercises?: WorkoutExercise[];
 };
 
@@ -125,6 +127,7 @@ export type WorkoutTemplate = {
 
 export type WorkoutPlan = WorkoutTemplate & {
   isCustom?: boolean;
+  isActive?: boolean;
 };
 
 export type ActivityLevel =
@@ -145,7 +148,15 @@ export type HealthProfile = {
   experienceLevel: ExperienceLevel;
   weeklyWorkoutGoal: number;
   preferredTrainingDays: string[];
+  energyFormula?: "female" | "male";
 };
+
+export type Account = { id: string; username: string; email: string };
+export type Session = { user: Account; token: string };
+export type Login = Pick<Account, "email"> & { password: string };
+export type Registration = Login & Pick<Account, "username">;
+export type MacroValues = { calories: number; protein: number; carbs: number; fat: number };
+export type DailyMacroLog = MacroValues & { dateIso: string };
 
 export type Streak = {
   currentWeeks: number;
