@@ -62,6 +62,41 @@ async function appChecks(page) {
   await page.screenshot({path:path.join(output,'integrated-editor.png')});
 }
 
+async function planChecks(page) {
+  await page.goto(base);
+  await page.getByRole('button',{name:'Demo öffnen',exact:true}).click({timeout:120000});
+  await page.getByRole('tab',{name:'Kalender',exact:true}).click();
+  await page.getByRole('button',{name:'Pull Day bearbeiten',exact:true}).click();
+  await page.getByLabel('Plandauer in Minuten',{exact:true}).fill('601');
+  await page.getByRole('button',{name:'Plan speichern',exact:true}).click();
+  await page.getByText('Vorlagendauer muss zwischen 1 und 600 Minuten liegen.',{exact:true}).waitFor();
+  await page.getByLabel('Plandauer in Minuten',{exact:true}).fill('60');
+  await page.getByLabel('Latziehen: Sätze',{exact:true}).fill('0');
+  await page.getByRole('button',{name:'Plan speichern',exact:true}).click();
+  await page.getByText('Sätze: ganze Zahl von 1 bis 100 eingeben.',{exact:true}).waitFor();
+  await page.getByLabel('Latziehen: Sätze',{exact:true}).fill('5');
+  await page.getByLabel('Latziehen: Gewicht in kg optional',{exact:true}).fill('0');
+  await page.getByRole('button',{name:'Kabelrudern nach oben',exact:true}).click();
+  await page.getByRole('button',{name:'Face Pulls entfernen',exact:true}).click();
+  await page.getByRole('dialog').getByPlaceholder('Übung suchen …').fill('Dead Bug');
+  await page.getByRole('button',{name:'Dead Bug zum Training hinzufügen',exact:true}).click();
+  await page.getByRole('button',{name:'Plan speichern',exact:true}).click();
+  await page.getByRole('dialog').waitFor({state:'hidden'});
+  await page.getByRole('button',{name:'Pull Day bearbeiten',exact:true}).click();
+  await page.getByText('1. Kabelrudern',{exact:true}).waitFor();
+  assert.equal(await page.getByLabel('Latziehen: Sätze',{exact:true}).inputValue(),'5');
+  assert.equal(await page.getByLabel('Latziehen: Gewicht in kg optional',{exact:true}).inputValue(),'0');
+  await page.getByLabel('Dead Bug: Sätze',{exact:true}).waitFor();
+  await page.getByLabel('Planname',{exact:true}).fill('Verwerfen');
+  await page.getByRole('button',{name:'Schliessen',exact:true}).click();
+  await page.getByRole('button',{name:'Planänderungen verwerfen',exact:true}).click();
+  await page.getByRole('button',{name:'Pull Day bearbeiten',exact:true}).click();
+  assert.equal(await page.getByLabel('Planname',{exact:true}).inputValue(),'Pull Day');
+  await page.getByLabel('Planname',{exact:true}).scrollIntoViewIfNeeded();
+  await page.getByRole('dialog').evaluate(async()=>{ await Promise.all(document.getAnimations().filter(a=>a.effect?.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{}))); });
+  await page.screenshot({path:path.join(output,'plan-editor.png')});
+}
+
 async function accountChecks(page) {
   await page.goto(base);
   const exact = (name) => page.getByRole('button', { name, exact: true });
@@ -127,6 +162,14 @@ async function failureChecks(page) {
   await page.screenshot({path:path.join(output,'failed-save.png')});
   await page.getByRole('button',{name:'Vorhandenes Training jetzt ersetzen',exact:true}).click();
   await page.getByRole('dialog').waitFor({state:'hidden'});
+  await page.getByRole('button',{name:'Push Day bearbeiten',exact:true}).click();
+  await page.getByLabel('Planname',{exact:true}).fill('Plan nach Fehler');
+  await page.getByRole('button',{name:'Plan speichern',exact:true}).click();
+  await page.getByText('Speichern fehlgeschlagen. Deine Eingaben bleiben erhalten.',{exact:true}).waitFor();
+  assert.equal(await page.getByLabel('Planname',{exact:true}).inputValue(),'Plan nach Fehler');
+  await page.getByRole('button',{name:'Plan speichern',exact:true}).click();
+  await page.getByRole('dialog').waitFor({state:'hidden'});
+  await page.getByRole('button',{name:'Plan nach Fehler bearbeiten',exact:true}).waitFor();
 }
 
 (async()=>{
@@ -135,7 +178,8 @@ async function failureChecks(page) {
   const browser = await chromium.launch({headless:true,...(chrome?{executablePath:chrome}:{})});
   const results=[];
   try {
-    for (const [name,check] of [['integrated app',appChecks],['controlled save failures',failureChecks],['accounts and macro tracking',accountChecks]]) {
+    for (const [name,check] of [['integrated app',appChecks],['controlled save failures',failureChecks],['accounts and macro tracking',accountChecks],['complete plan editor',planChecks]]) {
+      if (process.env.CHECK_GROUP && process.env.CHECK_GROUP !== name) continue;
       const page = await browser.newPage({viewport:{width:390,height:844}});
       page.setDefaultTimeout(20000);const errors=[];page.on('pageerror',error=>errors.push(error.message));
       try {await check(page);assert.deepEqual(errors,[]);results.push({name,status:'passed'});console.log(`PASS ${name}`);}
