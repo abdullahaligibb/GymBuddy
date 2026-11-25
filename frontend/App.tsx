@@ -18,7 +18,7 @@ import { WorkoutExerciseEditor } from "./src/components/WorkoutExerciseEditor";
 import { exercises } from "./src/data/exercises";
 import { createWorkoutFromTemplate } from "./src/domain/workoutTemplates";
 import { WeeklyCalendar } from "./src/components/WeeklyCalendar";
-import { nutritionTips } from "./src/data/nutritionTips";
+import { NutritionTipLibrary } from "./src/components/NutritionTipLibrary";
 import { demoTodayIso, demoUser, initialStreak } from "./src/data/profile";
 import { initialWorkouts } from "./src/data/workouts";
 import { WorkoutDay, WorkoutTemplate } from "./src/types";
@@ -32,7 +32,6 @@ const gymBuddyLogo = require("./assets/logo-gymbuddy.png");
 
 const tabs = ["Home", "Kalender", "Übungen", "Stats"];
 const demoToday = parseDemoDate(demoTodayIso);
-const nutritionTip = nutritionTips[0];
 
 export default function App() {
   const [workouts, setWorkouts] = useState<WorkoutDay[]>(initialWorkouts);
@@ -207,13 +206,8 @@ export default function App() {
 
         <ExerciseLibrary />
 
-        <SectionTitle label="Ernährung" title="Tipp für Muskelaufbau" />
-
-        <View style={styles.profilePanel}>
-          <Text style={styles.eyebrow}>{nutritionTip.category}</Text>
-          <Text style={styles.sectionHeading}>{nutritionTip.title}</Text>
-          <Text style={styles.bodyText}>{nutritionTip.body}</Text>
-        </View>
+        <SectionTitle label="Ernährung" title="Ernährungstipps" />
+        <NutritionTipLibrary />
       </ScrollView>
 
       <View style={styles.bottomNav}>
