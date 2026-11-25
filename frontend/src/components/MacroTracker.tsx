@@ -80,7 +80,7 @@ export function MacroTracker({ profile, target, logs, busy, onProfile, onSaveTar
     {saved ? <Totals values={saved} /> : <Text style={styles.body}>Für diesen Tag gibt es noch keinen Eintrag.</Text>}
     <View style={styles.inputs}>
       {fields.map(([key, label]) => <View style={styles.field} key={key}>
-        <Text style={styles.body}>{label} (g)</Text>
+        <Text style={[styles.body, styles.inputLabel]}>{label} (g)</Text>
         <TextInput accessibilityLabel={`${label} in Gramm`} value={draft[key]} keyboardType="number-pad"
           editable={!busy} maxLength={4} style={styles.input} onChangeText={(value) => {
             setError("");
@@ -134,6 +134,7 @@ const styles = StyleSheet.create({
   date: { color: "#F4F7F5", minWidth: 90, textAlign: "center" },
   inputs: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   field: { minWidth: 100, flex: 1, gap: 5 },
+  inputLabel: { minHeight: 40 },
   input: { color: "#F4F7F5", borderColor: "#44534D", borderWidth: 1, backgroundColor: "#111716",
     paddingHorizontal: 10, minHeight: 44, borderRadius: 8 },
   button: { backgroundColor: "#18201E", borderRadius: 8, minWidth: 44, minHeight: 44,

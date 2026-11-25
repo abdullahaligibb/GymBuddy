@@ -245,7 +245,7 @@ function TrainingApp({ api, username, token, endSession }: {
           </View>
           <TouchableOpacity
             accessibilityRole="button"
-            style={styles.profileButton}
+            style={[styles.profileButton, styles.headerAction]}
             onPress={() => { setActionError(""); setShowProfile(!showProfile); }}
           >
             <Text style={styles.profileButtonText}>{showProfile ? "Zurück" : "Profil"}</Text>
@@ -630,5 +630,9 @@ const styles = StyleSheet.create({
     color: "#7CFF6B",
     fontSize: 14,
     fontWeight: "900",
+  },
+  headerAction: {
+    marginTop: 0,
+    paddingHorizontal: 12,
   },
 });
