@@ -3,6 +3,17 @@ const assert = require('node:assert/strict');
 const { exercises } = require('../src/data/exercises.ts');
 const { filterExercises, EMPTY_EXERCISE_FILTERS, exerciseFilterOptions } = require('../src/domain/exerciseCatalog.ts');
 const { mapApiExercise, mapExerciseCatalogResponse, fetchExerciseCatalog } = require('../src/services/exerciseCatalogApi.ts');
+const { mergeExerciseCatalogs } = require('../src/domain/exerciseCatalog.ts');
+
+test('merged catalogs retain local template IDs and keep same-name API exercises distinct',()=>{
+  const remote=mapApiExercise({id:'remote-bank',name:exercises[0].name});
+  const before=structuredClone(exercises);
+  const merged=mergeExerciseCatalogs(exercises,[remote,remote]);
+  assert.equal(merged.length,exercises.length+1);
+  assert.ok(merged.some(item=>item.id===exercises[0].id));
+  assert.ok(merged.some(item=>item.id==='api:remote-bank'));
+  assert.deepEqual(exercises,before);
+});
 test('search ignores case and whitespace and combines all filters', () => {
   const hits = filterExercises(exercises, { search: ' BANKDRÜCKEN ', muscle: 'Brust', equipment: 'Langhantel', difficulty: 'Mittel' });
   assert.deepEqual(hits.map((x) => x.id), ['bankdruecken']);

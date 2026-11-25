@@ -3,6 +3,10 @@ import type { Exercise } from "../types";
 export const ALL_EXERCISES = "Alle";
 export type ExerciseFilters = { search: string; muscle: string; equipment: string; difficulty: string };
 export const EMPTY_EXERCISE_FILTERS: ExerciseFilters = { search: "", muscle: ALL_EXERCISES, equipment: ALL_EXERCISES, difficulty: ALL_EXERCISES };
+/** Keep local template references valid and never guess identity from an exercise name. */
+export function mergeExerciseCatalogs(...catalogs: readonly (readonly Exercise[])[]): Exercise[] {
+  return Array.from(new Map(catalogs.flatMap((catalog) => catalog.map((exercise) => [exercise.id, exercise] as const))).values());
+}
 const normalize = (value: string) => value.trim().toLocaleLowerCase("de-DE");
 
 export function filterExercises(items: readonly Exercise[], filters: ExerciseFilters): Exercise[] {

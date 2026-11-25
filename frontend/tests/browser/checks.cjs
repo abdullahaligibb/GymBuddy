@@ -62,6 +62,30 @@ async function appChecks(page) {
   await page.screenshot({path:path.join(output,'integrated-editor.png')});
 }
 
+async function catalogChecks(page) {
+  await page.route('**/catalog-check',route=>route.fulfill({contentType:'text/html; charset=utf-8',body:'<html><meta name="viewport" content="width=device-width, initial-scale=1"><div id="root"></div><script src="/tests/browser/catalog-harness.bundle?platform=web&dev=true&hot=false"></script></html>'}));
+  await page.goto(`${base}/catalog-check`);
+  await page.getByLabel('E-Mail',{exact:true}).fill('demo@gymbuddy.local');
+  await page.getByLabel('Passwort',{exact:true}).fill('GymBuddyDemo');
+  await page.getByRole('button',{name:'Anmelden',exact:true}).click();
+  await page.getByRole('tab',{name:'Kalender',exact:true}).click();
+  await page.getByRole('button',{name:'Pull Day bearbeiten',exact:true}).click();
+  await page.getByRole('dialog').getByPlaceholder('Übung suchen …').fill('Katalogtest');
+  await page.getByRole('button',{name:'Katalogtest Presse zum Training hinzufügen',exact:true}).click();
+  await page.getByRole('button',{name:'Plan speichern',exact:true}).click();
+  await page.getByRole('dialog').waitFor({state:'hidden'});
+  await page.getByRole('button',{name:'Pull Day auswählen',exact:true}).click();
+  await page.getByRole('button',{name:/^Montag .* auswählen$/}).click();
+  await page.getByRole('button',{name:'Im Kalender einplanen',exact:true}).click();
+  if(await page.getByRole('button',{name:'Vorhandenes Training jetzt ersetzen',exact:true}).count())await page.getByRole('button',{name:'Vorhandenes Training jetzt ersetzen',exact:true}).click();
+  await page.getByRole('dialog').waitFor({state:'hidden'});
+  await page.getByRole('button',{name:'Übungen für Montag bearbeiten',exact:true}).click();
+  await page.getByLabel('Katalogtest Presse: Sätze',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Schliessen',exact:true}).click();
+  await page.getByRole('button',{name:'Training am Montag anzeigen',exact:true}).click();
+  await page.getByRole('dialog').getByText('6. Katalogtest Presse',{exact:true}).waitFor();
+}
+
 async function planChecks(page) {
   await page.goto(base);
   await page.getByRole('button',{name:'Demo öffnen',exact:true}).click({timeout:120000});
@@ -178,7 +202,7 @@ async function failureChecks(page) {
   const browser = await chromium.launch({headless:true,...(chrome?{executablePath:chrome}:{})});
   const results=[];
   try {
-    for (const [name,check] of [['integrated app',appChecks],['controlled save failures',failureChecks],['accounts and macro tracking',accountChecks],['complete plan editor',planChecks]]) {
+    for (const [name,check] of [['integrated app',appChecks],['controlled save failures',failureChecks],['accounts and macro tracking',accountChecks],['complete plan editor',planChecks],['shared exercise catalog',catalogChecks]]) {
       if (process.env.CHECK_GROUP && process.env.CHECK_GROUP !== name) continue;
       const page = await browser.newPage({viewport:{width:390,height:844}});
       page.setDefaultTimeout(20000);const errors=[];page.on('pageerror',error=>errors.push(error.message));
