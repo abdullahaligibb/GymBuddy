@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { WorkoutDay, WorkoutStatus } from "../types";
+import { isFutureDate } from "../domain/calendar";
 
 type WeeklyCalendarProps = {
   workouts: WorkoutDay[];
@@ -9,6 +10,12 @@ type WeeklyCalendarProps = {
   onEditExercises?: (workout: WorkoutDay) => void;
   onMarkDone?: (workout: WorkoutDay) => void;
   onDeleteWorkout?: (workout: WorkoutDay) => void;
+  onViewWorkout?: (workout: WorkoutDay) => void;
+  onPreviousWeek: () => void;
+  onNextWeek: () => void;
+  onToday: () => void;
+  weekLabel: string;
+  todayIso: string;
 };
 
 function getStatusStyle(status: WorkoutStatus) {
@@ -22,6 +29,10 @@ function getStatusStyle(status: WorkoutStatus) {
 
   if (status === "verpasst") {
     return styles.missedCard;
+  }
+
+  if (status === "ungeplant") {
+    return styles.emptyCard;
   }
 
   return styles.restCard;
@@ -40,6 +51,10 @@ function getStatusLabel(status: WorkoutStatus) {
     return "Verpasst";
   }
 
+  if (status === "ungeplant") {
+    return "Ungeplant";
+  }
+
   return "Ruhetag";
 }
 
@@ -50,18 +65,42 @@ export function WeeklyCalendar({
   onEditExercises,
   onMarkDone,
   onDeleteWorkout,
+  onViewWorkout,
+  onPreviousWeek,
+  onNextWeek,
+  onToday,
+  weekLabel,
+  todayIso,
 }: WeeklyCalendarProps) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.weekRow}
-    >
+    <View>
+      <View style={styles.weekNavigation}>
+        <TouchableOpacity accessibilityLabel="Vorherige Woche" style={styles.iconButton} onPress={onPreviousWeek}>
+          <Text style={styles.iconButtonText}>‹</Text>
+        </TouchableOpacity>
+        <View style={styles.weekHeading}>
+          <Text style={styles.weekLabel}>{weekLabel}</Text>
+          <TouchableOpacity accessibilityRole="button" onPress={onToday}>
+            <Text style={styles.todayLink}>Zu heute</Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity accessibilityLabel="Nächste Woche" style={styles.iconButton} onPress={onNextWeek}>
+          <Text style={styles.iconButtonText}>›</Text>
+        </TouchableOpacity>
+      </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.weekRow}
+      >
       {workouts.map((item) => {
-        const isEmptyRestDay = item.status === "ruhe" && item.muscles.length === 0;
+        const isEmptyDay = item.status === "ungeplant";
+        const isRestDay = item.status === "ruhe";
+        const isToday = item.dateIso === todayIso;
+        const future = isFutureDate(item.dateIso);
 
         return (
-          <View key={item.id} style={[styles.dayCard, getStatusStyle(item.status)]}>
+          <View key={item.dateIso} style={[styles.dayCard, getStatusStyle(item.status), isToday && styles.todayCard]}>
             <View style={styles.dayHeader}>
               <View>
                 <Text style={styles.dayText}>{item.day}</Text>
@@ -86,24 +125,20 @@ export function WeeklyCalendar({
               </Text>
             )}
 
-            {item.muscles.length > 0 ? (
+            {!isEmptyDay ? (
               <View>
-                <View style={styles.chipWrap}>
-                  {item.muscles.map((muscle) => (
-                    <Text style={styles.chip} key={muscle}>
-                      {muscle}
-                    </Text>
-                  ))}
-                </View>
+                {item.muscles.length > 0 && <View style={styles.chipWrap}>
+                  {item.muscles.map((muscle) => <Text style={styles.chip} key={muscle}>{muscle}</Text>)}
+                </View>}
                 <View style={styles.actionRow}>
                   <TouchableOpacity
                     style={styles.secondaryAction}
-                    onPress={() => onEditWorkout?.(item)}
+                    onPress={() => isRestDay ? onEditWorkout?.(item) : onViewWorkout?.(item)}
                   >
-                    <Text style={styles.secondaryActionText}>Bearbeiten</Text>
+                    <Text style={styles.secondaryActionText}>{isRestDay ? "Bearbeiten" : "Details"}</Text>
                   </TouchableOpacity>
 
-                  {item.status !== "erledigt" && (
+                  {!isRestDay && item.status !== "erledigt" && !future && (
                     <TouchableOpacity
                       style={styles.doneAction}
                       onPress={() => onMarkDone?.(item)}
@@ -113,12 +148,12 @@ export function WeeklyCalendar({
                   )}
                 </View>
                 {onEditExercises && item.type !== "Rest Day" ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Übungen für ${item.fullDay} bearbeiten`} style={styles.secondaryAction} onPress={() => onEditExercises(item)}><Text style={styles.secondaryActionText}>Übungen bearbeiten</Text></TouchableOpacity> : null}
-                <TouchableOpacity
+                {!isRestDay && <TouchableOpacity
                   style={styles.deleteAction}
                   onPress={() => onDeleteWorkout?.(item)}
                 >
                   <Text style={styles.deleteActionText}>Training löschen</Text>
-                </TouchableOpacity>
+                </TouchableOpacity>}
               </View>
             ) : (
               <TouchableOpacity
@@ -131,7 +166,8 @@ export function WeeklyCalendar({
           </View>
         );
       })}
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -139,6 +175,40 @@ const styles = StyleSheet.create({
   weekRow: {
     gap: 12,
     paddingRight: 20,
+  },
+  weekNavigation: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  weekHeading: {
+    alignItems: "center",
+    flex: 1,
+  },
+  weekLabel: {
+    color: "#F4F7F5",
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  todayLink: {
+    color: "#7CFF6B",
+    fontSize: 12,
+    fontWeight: "800",
+    marginTop: 4,
+  },
+  iconButton: {
+    alignItems: "center",
+    backgroundColor: "#18201E",
+    borderRadius: 8,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  iconButtonText: {
+    color: "#F4F7F5",
+    fontSize: 30,
+    lineHeight: 32,
   },
   dayCard: {
     backgroundColor: "#111716",
@@ -159,6 +229,14 @@ const styles = StyleSheet.create({
   },
   restCard: {
     borderColor: "rgba(255,255,255,0.08)",
+  },
+  emptyCard: {
+    borderColor: "rgba(255,255,255,0.08)",
+    borderStyle: "dashed",
+  },
+  todayCard: {
+    borderColor: "#7CFF6B",
+    borderWidth: 2,
   },
   dayHeader: {
     alignItems: "flex-start",

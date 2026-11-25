@@ -2,7 +2,7 @@ import type { Exercise, WorkoutDay, WorkoutTemplate } from "../types";
 import { toExerciseDraft, validateExerciseDrafts } from "./workoutExercises";
 
 export function isFreeCalendarDay(day: WorkoutDay): boolean {
-  return day.status === "ruhe" && day.type === "Rest Day" &&
+  return (day.status === "ruhe" || day.status === "ungeplant") && day.type === "Rest Day" &&
     day.durationMinutes === 0 && day.muscles.length === 0 &&
     !day.exercises?.length && !day.sourceTemplateId && !day.notes?.trim();
 }
