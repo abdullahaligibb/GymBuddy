@@ -9,6 +9,10 @@ function createApp() {
   app.use('/api/auth',require('./routes/authRoutes'));
   app.use('/api/exercises',require('./routes/exerciseRoutes'));
   app.use('/api/workouts',require('./routes/trainingRoutes'));
+  const accountData=require('./routes/accountDataRoutes');
+  app.use('/api/plans',accountData.plans);
+  app.use('/api/profile',accountData.profile);
+  app.use('/api/macros',accountData.macros);
   app.use(errorHandler);
   return app;
 }
