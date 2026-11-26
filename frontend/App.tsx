@@ -26,6 +26,7 @@ import { NutritionTipLibrary } from "./src/components/NutritionTipLibrary";
 import { confirmAction } from "./src/components/feedback";
 import { addDays, formatWeekRange, getWeekDays, isFutureDate, toIsoDate } from "./src/domain/calendar";
 import { createWorkoutFromTemplate } from "./src/domain/workoutTemplates";
+import { workoutTemplates } from "./src/data/templates";
 import { HealthProfile, WorkoutDay, WorkoutPlan, WorkoutStatus, WorkoutTemplate } from "./src/types";
 import { demoLogin } from "./src/services/mockApi";
 import { configuredApi } from "./src/services/configuredApi";
@@ -125,6 +126,7 @@ function TrainingApp({ api, username, token, endSession }: {
     </SafeAreaView>;
   }
   const { workouts, plans, profile, exercises } = data;
+  const availablePlans = [...workoutTemplates.filter((template) => !plans.some((plan) => plan.id === template.id)), ...plans];
   const exerciseDay = workouts.find((day) => day.id === exerciseDayId);
   const detailWorkout = workouts.find((day) => day.id === detailDayId);
 
@@ -334,7 +336,7 @@ function TrainingApp({ api, username, token, endSession }: {
 
         <SectionTitle label="Trainingspläne" title="Workout-Vorlagen" />
 
-        <WorkoutPlanManager plans={plans} exercises={exercises} onSave={savePlan} onDelete={deletePlan} onUse={setTemplateToAdopt} />
+        <WorkoutPlanManager plans={availablePlans} exercises={exercises} onSave={savePlan} onDelete={deletePlan} onUse={setTemplateToAdopt} />
         </> : null}
 
         {showProfile ? <>

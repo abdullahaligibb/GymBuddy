@@ -1,0 +1,19 @@
+services:
+  database:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gymbuddy
+      POSTGRES_DB: gymbuddy_dev
+      POSTGRES_PASSWORD: ${GYMBUDDY_DB_PASSWORD:?Run npm run setup first}
+    ports:
+      - "127.0.0.1:55433:5432"
+    volumes:
+      - gymbuddy_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gymbuddy -d gymbuddy_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+volumes:
+  gymbuddy_data:

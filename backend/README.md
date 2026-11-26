@@ -40,9 +40,9 @@ HTTP-Dienst ersetzt; Express, Prisma und PostgreSQL sind echt.
 ## Vollständiger Datenvertrag
 
 `PUT /api/workouts/by-date/:date` ersetzt ein vollständiges Training atomar.
-`GET/PUT/DELETE /api/plans/:id` (Listenabruf ohne ID), `GET/PUT /api/profile`,
-`GET/PUT /api/macros/target` und `GET/PUT/DELETE /api/macros/logs/:date`
-(Listenabruf ohne Datum) verwenden dieselben Felder wie der Frontend-v1-Vertrag.
+`GET /api/plans`, `PUT/DELETE /api/plans/:id`, `GET/PUT /api/profile`,
+`GET/PUT /api/macros/target`, `GET /api/macros/logs` und
+`PUT/DELETE /api/macros/logs/:date` verwenden dieselben Felder wie der Frontend-v1-Vertrag.
 Plan-IDs des Clients sind je Benutzer eindeutig; Datenbank-IDs und fremde
 Planreferenzen werden nicht als frei wählbare Benutzerzuordnung übernommen.
 Das Löschen eines Plans erhält die bereits eingeplanten Trainings und setzt nur

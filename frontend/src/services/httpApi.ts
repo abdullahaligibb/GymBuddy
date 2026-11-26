@@ -87,7 +87,7 @@ function log(value: unknown): DailyMacroLog { const data = object(value); return
 
 export type HttpApiOptions = { contract?: "legacy" | "v1"; request?: typeof fetch; timeoutMs?: number };
 
-/** legacy matches the checked-in backend. v1 is the documented complete, atomic contract. */
+/** v1 is the complete PostgreSQL-backed API; legacy is retained for older servers. */
 export function createHttpApi(baseUrl: string, options: HttpApiOptions = {}): AppApi {
   const url = new URL(baseUrl);
   if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error("Eine gültige Serveradresse ohne Zugangsdaten angeben.");
