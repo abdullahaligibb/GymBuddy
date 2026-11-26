@@ -71,3 +71,30 @@ test('loaded external exercise IDs and local catalog IDs stay distinct after sav
  await request('POST','/api/auth/register',null,{username:42,email:[],password:{}},400);
  await request('POST','/api/auth/register',null,{username:'Short',email:'short@example.test',password:'1234567'},400);
 });
+
+test('plans, profile and macro values persist after a process restart and stay private',async()=>{
+ const a=await account(),b=await account();
+ const plan={id:'same-client-id',name:'Eigener Plan',goal:'Kraft',durationMinutes:60,type:'Push',difficulty:'Mittel',muscles:['Brust'],exercises:[{exerciseId:'bankdruecken',sets:3,repetitions:'8–12',weightKg:0,restSeconds:0,notes:'sauber'}]};
+ const savedPlan=(await request('PUT','/api/plans/'+plan.id,a.token,plan)).plan;
+ const profile={name:'Testprofil',birthDateIso:'2005-01-31',heightCm:180,weightKg:75,targetWeightKg:80,targetDateIso:'2027-06-01',activityLevel:'Moderat aktiv',primaryGoal:'Muskelaufbau',experienceLevel:'Mittel',weeklyWorkoutGoal:3,preferredTrainingDays:['Montag','Mittwoch','Freitag'],energyFormula:'male'};
+ assert.deepEqual((await request('PUT','/api/profile',a.token,profile)).profile,profile);
+ const target={calories:2400,protein:150,carbs:300,fat:67};const log={dateIso:'2026-11-23',calories:1000,protein:50,carbs:100,fat:10};
+ await request('PUT','/api/macros/target',a.token,target);await request('PUT','/api/macros/logs/'+log.dateIso,a.token,log);
+ await request('PUT','/api/macros/logs/'+log.dateIso,a.token,{...log,protein:0});
+ await stop();await start();
+ assert.deepEqual((await request('GET','/api/plans',a.token)).plans,[savedPlan]);assert.deepEqual((await request('GET','/api/profile',a.token)).profile,profile);
+ assert.deepEqual((await request('GET','/api/macros/target',a.token)).target,target);assert.deepEqual((await request('GET','/api/macros/logs',a.token)).logs,[{...log,protein:0}]);
+ assert.deepEqual((await request('GET','/api/plans',b.token)).plans,[]);assert.equal((await request('GET','/api/profile',b.token)).profile,null);assert.equal((await request('GET','/api/macros/target',b.token)).target,null);assert.deepEqual((await request('GET','/api/macros/logs',b.token)).logs,[]);
+ // Same client-side plan ID is scoped by account; it cannot overwrite another account's plan.
+ await request('PUT','/api/plans/'+plan.id,b.token,{...plan,name:'Konto B'});await request('DELETE','/api/plans/'+plan.id,b.token,undefined,204);
+ assert.deepEqual((await request('GET','/api/plans',a.token)).plans,[savedPlan]);
+ const foreignPlan=await prisma.trainingPlan.findFirst({where:{userId:a.user.id}});
+ await request('PUT','/api/workouts/by-date/2026-11-23',b.token,workout({trainingPlanId:foreignPlan.id}),404);
+ await request('PUT','/api/workouts/by-date/2026-11-23',a.token,workout({trainingPlanId:plan.id}));
+ await request('PUT','/api/plans/'+plan.id,a.token,{...plan,exercises:[{exerciseId:'unknown',sets:3,repetitions:'8'}]},400);
+ assert.deepEqual((await request('GET','/api/plans',a.token)).plans,[savedPlan]);
+ await request('PUT','/api/macros/target',a.token,{...target,fat:-1},400);await request('PUT','/api/macros/logs/2026-02-30',a.token,{...log,dateIso:'2026-02-30'},400);
+ await request('PUT','/api/profile',a.token,{...profile,birthDateIso:'2026-02-30'},400);await request('PUT','/api/profile',a.token,{...profile,weeklyWorkoutGoal:1.5},400);
+ await request('DELETE','/api/plans/'+plan.id,a.token,undefined,204);assert.equal((await request('GET','/api/workouts',a.token)).workouts[0].trainingPlanId,null);
+ await request('DELETE','/api/macros/logs/'+log.dateIso,a.token,undefined,204);assert.deepEqual((await request('GET','/api/macros/logs',a.token)).logs,[]);
+});
