@@ -1,0 +1,41 @@
+{
+  "stand": "26.11.2026",
+  "codeCommit": "eb535aa71a802264a011e2f47da3e8e5bde1bd69",
+  "evidenceType": "Zusammenfassung der in dieser Sitzung erfolgreich ausgeführten Prüfungen; keine rohe Logdatei.",
+  "frontend": {
+    "typecheckExitCode": 0,
+    "tests": 34,
+    "passed": 34
+  },
+  "backend": {
+    "validationTests": 2,
+    "passed": 2
+  },
+  "postgresql": {
+    "tests": 8,
+    "passed": 8,
+    "apiRestart": true,
+    "databaseRestart": true,
+    "restoreIntoSeparateDatabase": true,
+    "realFrontendClient": true
+  },
+  "browserDemoGroups": 6,
+  "liveBrowserFlows": 4,
+  "androidBundleExport": {
+    "exitCode": 0,
+    "modules": 612
+  },
+  "physicalDevices": "Vom Team auf später verschoben; noch nicht durchgeführt.",
+  "environment": {
+    "node": "24.22.3",
+    "prisma": "6.12.0",
+    "postgresql": "16",
+    "browser": "Playwright/Chrome, 390x844"
+  },
+  "limits": [
+    "Bestehende Frontend-Abhängigkeiten verwendet; Backend mit npm ci installiert.",
+    "Ein externer Übungsanbieter wird in einem DB-Fall durch eine HTTP-Fixture ersetzt.",
+    "Lokale PostgreSQL-Instanzen; kein Nachweis für einen externen produktiven Host.",
+    "Fachliche Offline-/Streak-Freigabe und vollständige Abnahme offen."
+  ]
+}

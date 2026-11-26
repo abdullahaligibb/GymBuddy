@@ -54,3 +54,5 @@ Historische Schulunterlagen nennen ihren damaligen Quellstand. Die ursprünglich
 Offline-Architektur und die spätere Serverarchitektur sind unterschiedliche fachliche
 Umfänge; die Änderung und die Wochenziel-Streak-Regel bleiben mit dem Auftraggeber abzustimmen.
 Arbeitsjournale und persönliche Stunden wurden durch diese Umsetzung nicht verändert.
+
+Die aktualisierten Abgabeunterlagen liegen unter `docs/school/3_*`. Zuerst den [Nachtrag 3.1](docs/school/3_1_nachtrag_serverintegration_LAAG.pdf) lesen; er ersetzt die früheren technischen Statusaussagen. Die Dateien ohne 3_-Präfix bleiben historische Unterlagen. Journale wurden nicht geändert.
