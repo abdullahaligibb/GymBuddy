@@ -26,11 +26,9 @@ async function fetchExercisesFromApi({
   params.append('limit', String(safeLimit));
 
   const url = `${BASE_URL}/exercises?${params.toString()}`;
-  const response = await fetch(url);
+  const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error('API Antwort:', errorText);
     throw new Error(`ExerciseDB API Fehler: ${response.status}`);
   }
 

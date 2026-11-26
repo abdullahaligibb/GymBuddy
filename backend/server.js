@@ -1,30 +1,7 @@
-require("dotenv").config();
-
-const express = require("express");
-const cors = require("cors");
- 
-const app = express();
-const PORT = Number(process.env.PORT) || 3000;
-const APP_NAME = process.env.APP_NAME || "GymBuddy API";
-const exerciseRoutes = require('./src/routes/exerciseRoutes');
-const authRoutes = require('./src/routes/authRoutes');
-const workoutRoutes = require('./src/routes/workoutRoutes');
-
-app.use(cors());
-app.use(express.json());
-
-app.get("/health", (req, res) => {
-  res.json({
-    status: "ok",
-    app: APP_NAME,
-    environment: process.env.NODE_ENV || "development",
-  });
-});
-
-app.use("/api/exercises", exerciseRoutes);
-app.listen(PORT, () => {
-  console.log(`${APP_NAME} läuft auf Port ${PORT}`);
-});
-
-app.use('/api/auth', authRoutes);
-app.use('/api/workouts', workoutRoutes);
+require('dotenv').config({quiet:true});
+const {createApp}=require('./src/app');
+const prisma=require('./src/lib/prisma');
+const port=Number(process.env.PORT) || 3000;
+const server=createApp().listen(port,process.env.HOST || '0.0.0.0',()=>console.log(`GymBuddy API läuft auf Port ${port}`));
+async function shutdown() {server.close(async()=>{await prisma.$disconnect();process.exit(0);});}
+process.on('SIGTERM',shutdown);process.on('SIGINT',shutdown);

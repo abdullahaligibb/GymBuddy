@@ -25,6 +25,7 @@ async function getExercises(req, res) {
       before,
     });
 
+    await require('../services/catalogService').cacheExternalExercises(exercises);
     res.json({ exercises });
   } catch (error) {
     console.error('Fehler beim Laden der Übungen:', error.message);

@@ -50,6 +50,8 @@ model User {
   exercises      Exercise[]       // Eigene erstellte Übungen
   macroTarget    MacroTarget?     // 1:1 Berechnetes Tagesziel
   dailyMacroLogs DailyMacroLog[]  // 1:N Täglich eingetragene Makros
+  healthProfile HealthProfile?
+  revokedTokens RevokedToken[]
 }
 
 // -----------------------------------------
@@ -89,6 +91,7 @@ enum WorkoutStatus {
   GEPLANT
   ERLEDIGT
   VERPASST
+  RUHE
 }
 
 model TrainingPlan {
@@ -97,10 +100,18 @@ model TrainingPlan {
   description String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
+  clientId String?
+  goal String @default("")
+  durationMinutes Int @default(45)
+  type String @default("Full Body")
+  difficulty String @default("Mittel")
+  muscles String[] @default([])
 
   userId   String
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workouts Workout[]
+  exercises PlanExercise[]
+  @@unique([userId, clientId])
 }
 
 model Workout {
@@ -110,6 +121,12 @@ model Workout {
   duration  Int?          // Dauer in Minuten
   status    WorkoutStatus @default(GEPLANT)
   createdAt DateTime      @default(now())
+  time String?
+  type String @default("Full Body")
+  intensity String @default("Mittel")
+  muscles String[] @default([])
+  notes String?
+  sourceTemplateId String?
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -118,11 +135,13 @@ model Workout {
   trainingPlan   TrainingPlan? @relation(fields: [trainingPlanId], references: [id], onDelete: SetNull)
 
   exercises WorkoutExercise[]
+  @@unique([userId, date])
 }
 
 model Exercise {
   id               String   @id @default(uuid())
   externalId       String?  @unique // ID aus der ExerciseDB-API
+  catalogId String? @unique
   name             String
   description      String?
   targetMuscles    String[]
@@ -135,6 +154,7 @@ model Exercise {
   user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   workoutExercises WorkoutExercise[]
+  planExercises PlanExercise[]
 }
 
 model WorkoutExercise {
@@ -143,6 +163,10 @@ model WorkoutExercise {
   sets     Int?
   reps     Int?
   weight   Float? // Gewicht in kg
+  catalogId String?
+  repetitions String?
+  restSeconds Int?
+  notes String?
 
   workoutId  String
   workout    Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
@@ -150,4 +174,46 @@ model WorkoutExercise {
   exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
   @@unique([workoutId, exerciseId, position])
+  @@unique([workoutId, position])
+}
+
+model PlanExercise {
+  id String @id @default(uuid())
+  trainingPlanId String
+  trainingPlan TrainingPlan @relation(fields: [trainingPlanId], references: [id], onDelete: Cascade)
+  exerciseId String
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
+  catalogId String
+  position Int
+  sets Int
+  repetitions String
+  weight Float?
+  restSeconds Int?
+  notes String?
+  @@unique([trainingPlanId, position])
+}
+
+model HealthProfile {
+  userId String @id
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name String
+  birthDateIso String
+  heightCm Float
+  weightKg Float
+  targetWeightKg Float
+  targetDateIso String
+  activityLevel String
+  primaryGoal String
+  experienceLevel String
+  weeklyWorkoutGoal Int
+  preferredTrainingDays String[]
+  energyFormula String?
+}
+
+model RevokedToken {
+  tokenHash String @id
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  @@index([expiresAt])
 }
