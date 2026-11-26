@@ -8,6 +8,6 @@ export function configuredApi(config: { mode?: string; baseUrl?: string; contrac
   if (mode !== "server") return { error: "Der App-Modus muss demo oder server sein." };
   if (!config.baseUrl?.trim()) return { error: "Für den Serverbetrieb fehlt die Serveradresse EXPO_PUBLIC_API_URL." };
   if (config.contract && !["legacy", "v1"].includes(config.contract)) return { error: "Der Serververtrag muss legacy oder v1 sein." };
-  try { return { api: createHttpApi(config.baseUrl.trim(), { contract: config.contract === "v1" ? "v1" : "legacy" }) }; }
+  try { return { api: createHttpApi(config.baseUrl.trim(), { contract: config.contract === "legacy" ? "legacy" : "v1" }) }; }
   catch { return { error: "Die konfigurierte Serveradresse ist ungültig. Bitte EXPO_PUBLIC_API_URL prüfen." }; }
 }

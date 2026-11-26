@@ -1,6 +1,6 @@
 # HTTP-Vertrag für die vollständige Frontend-Anbindung
 
-Stand 25.11.2026. Der Transport ist im Frontend implementiert. `legacy` verwendet den aktuell vorhandenen Serverumfang. `v1` ist der vollständige vereinbarbare Zielvertrag; die zusätzlichen Routen sind im derzeitigen Express-Backend noch nicht implementiert. Die Tests unter `frontend/tests/httpApi.test.cjs` und `frontend/tests/browser/http-fixture.cjs` prüfen den Client gegen entsprechende Testantworten.
+Stand 26.11.2026. Der vollständige v1-Vertrag ist im Express-/Prisma-/PostgreSQL-Backend implementiert und gegen den tatsächlichen TypeScript-Client geprüft. `legacy` bleibt als ausdrückliche Option für ältere Server erhalten. Ohne Vertragsangabe verwendet eine konfigurierte Serveradresse v1.
 
 ## Transport und Fehler
 
@@ -20,9 +20,9 @@ Alle Inhalte sind JSON, ausgenommen 204-Antworten ohne Inhalt. Geschützte Aufru
 | PATCH /api/workouts/:id/status | status GEPLANT, ERLEDIGT oder VERPASST | workout |
 | DELETE /api/workouts/:id | Bearer-Token | 204 |
 
-`user` enthält mindestens die Zeichenketten id, username und email. Workout-Antworten verwenden die bestehenden Datenbankfelder id, name, date, duration und status. Ungültige oder fehlende Kalenderdaten werden als fehlerhafte Antwort gemeldet. Der aktuelle Server unterstützt weder RUHE noch die vollständigen zusätzlichen Trainingsfelder; der Client täuscht deren Speicherung im Modus legacy nicht vor.
+`user` enthält mindestens die Zeichenketten id, username und email. Workout-Antworten verwenden die bestehenden Datenbankfelder id, name, date, duration und status. Ungültige oder fehlende Kalenderdaten werden als fehlerhafte Antwort gemeldet. Der aktuelle v1-Server unterstützt RUHE und alle zusätzlichen Trainingsfelder. Der ältere legacy-Client aktiviert weiterhin nur den früheren Teilumfang.
 
-## Zusätzliche Routen für v1
+## Vollständige implementierte Routen für v1
 
 | Methode und Pfad | Anfrage | Erfolgsantwort |
 | --- | --- | --- |
@@ -55,6 +55,14 @@ Pläne entsprechen `WorkoutPlan` aus `frontend/src/types.ts`, einschliesslich ge
 
 Makrowerte enthalten calories, protein, carbs und fat als nichtnegative ganze Zahlen. Tageswerte ergänzen dateIso. Erneutes Speichern ersetzt den vollständigen Eintrag des Benutzer-Datums. Alle Lese- und Schreiboperationen sind nach Benutzer zu trennen.
 
-## Noch im Backend umzusetzen
+## Persistenz und Prüfung
 
-Loris muss die neuen Routen, vollständigen Felder, atomaren Ersetzungen und entsprechenden Migrationen bereitstellen. Der Frontend-Testserver speichert Testdaten nur im Arbeitsspeicher. Er beweist HTTP-Übertragung und Client-Verhalten, keine reale Datenbankpersistenz, Sicherung oder Serverfreigabe. Für den bisherigen JWT-Server erfolgt Logout durch Entfernen des Gerätetokens; ein serverseitiger Widerruf bestehender JWTs wird im legacy-Modus nicht behauptet.
+Vollständige Trainings und Pläne werden atomar in PostgreSQL gespeichert. Profil und
+Makros werden nach Benutzer getrennt upsertiert. Logout widerruft den konkreten Token
+dauerhaft; die Middleware prüft Widerruf und vorhandenes Konto. Ein API-Neustart erhält
+Daten und Tokenwiderruf. Acht echte Datenbankfälle sowie Live-App-Abläufe sind geprüft;
+siehe testing.md. Physische Smartphones werden separat geprüft.
+
+Der vollständige Schreibweg ist PUT, nicht die frühere Folge von Teil-POSTs.
+Die alten POST-Teilrouten sind am aktuellen App-Einstieg nicht registriert. Bestehende
+Clients müssen auf den vollständigen v1-Vertrag umgestellt werden.

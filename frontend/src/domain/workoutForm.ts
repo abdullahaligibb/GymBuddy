@@ -24,16 +24,17 @@ export function validateWorkoutDraft(
   const errors: ValidationErrors = {};
   const duration = Number(draft.duration);
 
-  if (!draft.title.trim()) errors.title = "Bitte einen Trainingstitel eingeben.";
+  if (!draft.title.trim() || draft.title.trim().length > 60) errors.title = "Trainingstitel: 1 bis 60 Zeichen eingeben.";
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.time)) {
     errors.time = "Bitte eine Uhrzeit im Format HH:MM eingeben.";
   }
-  if (!Number.isInteger(duration) || duration < 5 || duration > 360) {
-    errors.duration = "Die Dauer muss zwischen 5 und 360 Minuten liegen.";
+  if (!Number.isInteger(duration) || duration < 1 || duration > 600) {
+    errors.duration = "Die Dauer muss zwischen 1 und 600 Minuten liegen.";
   }
   if (draft.muscles.length === 0) {
     errors.muscles = "Bitte mindestens eine Muskelgruppe auswählen.";
   }
+  if (draft.notes.trim().length > 2000) errors.notes = "Notizen dürfen höchstens 2000 Zeichen enthalten.";
   if (
     isFutureDate(draft.dateIso, today) &&
     (draft.status === "erledigt" || draft.status === "verpasst")

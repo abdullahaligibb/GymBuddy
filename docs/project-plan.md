@@ -1,3 +1,21 @@
+# Aktueller Nachtrag – 26.11.2026
+
+Die zuvor offenen Server-Schreibwege sind umgesetzt. Getrennte Pakete:
+`feature/persistent-training` (615523b), `feature/profile-plans-macros` (4b2457b)
+und `feature/server-connection` (Client, lokale Einrichtung und Gesamtprüfung).
+Die ersten beiden Pakete wurden nach erfolgreichen echten PostgreSQL-Tests konfliktfrei
+in main zusammengeführt. Das dritte Paket enthält die bestandene Gesamtprüfung und wird ebenfalls separat zusammengeführt.
+
+Damit sind atomare vollständige Trainingsspeicherung, Kontentrennung, Pläne, Profil,
+Makros, API-/DB-Neustart und Wiederherstellung technisch nachgewiesen. Zwei physische
+Smartphones, unabhängige Bedienprüfung, Geräte-Leistungsmessung und fachliche Abnahme
+bleiben offen. Arbeitsjournale und persönliche Stunden sind in diesem Nachtrag unverändert.
+Loris' ältere Beiträge werden nicht rückwirkend um die hier neu implementierten Routen erweitert.
+Die folgende frühere Arbeitsteilung bleibt als Planungsbasis erhalten; sie ist keine aktuelle
+Liste fehlender Implementierungen oder alleiniger Urheberschaft.
+
+---
+
 # Projektplanung GymBuddy
 
 Stand 25.11.2026. Autoren: Abdullah Ali, Gabriel Maurer, Arion Zeqaj und Loris Pérez, IM24A.
@@ -52,7 +70,7 @@ Konkrete Schulabgaben werden gegen den aktuellen Unterrichtsplan bestätigt. Vie
 
 Git-Autor, Commit und Änderungsinhalt gemeinsam betrachten. `MusicToGetCodedOn` wird Loris zugeordnet. Ein Merge belegt die Zusammenführung, nicht automatisch die alleinige Urheberschaft aller enthaltenen Dateien. Arbeitsstunden lassen sich aus Commit-Zeitpunkten nicht zuverlässig bestimmen.
 
-Aktuelle Abdullah-Pakete: `feature/abdullah-exercise-library`, `feature/abdullah-workout-exercises`, `feature/abdullah-workout-templates` und `feature/abdullah-nutrition-tips`. Dokumentation und Testnachweise erhalten separate Branches. Jede Änderung wird vor der Zusammenführung geprüft.
+Aktuelle Abdullah-Pakete: `feature/exercise-library`, `feature/workout-exercises`, `feature/workout-templates` und `feature/nutrition-tips`. Dokumentation und Testnachweise erhalten separate Branches. Jede Änderung wird vor der Zusammenführung geprüft.
 
 | Person | Ausgewählte belegte Commits | Inhalt laut Verlauf |
 | --- | --- | --- |

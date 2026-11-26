@@ -28,7 +28,7 @@ async function getExercises(req, res) {
     await require('../services/catalogService').cacheExternalExercises(exercises);
     res.json({ exercises });
   } catch (error) {
-    console.error('Fehler beim Laden der Übungen:', error.message);
+    console.error('Fehler beim Laden der Übungen:', error.code || error.name);
     res.status(502).json({
       error: 'CATALOG_UNAVAILABLE',
       message: 'Übungskatalog konnte nicht von der externen API geladen werden.',

@@ -1,0 +1,9 @@
+{
+  "name": "gymbuddy",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "setup": "node scripts/start-local.cjs --setup-only",
+    "dev": "node scripts/start-local.cjs"
+  }
+}

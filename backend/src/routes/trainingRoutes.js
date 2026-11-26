@@ -1,11 +1,45 @@
 const router = require('express').Router();
 const auth = require('../middlewares/authMiddleware');
-const {asyncRoute} = require('../lib/errors');
+const { asyncRoute } = require('../lib/errors');
 const service = require('../services/trainingService');
 router.use(auth);
-router.get('/',asyncRoute(async(req,res)=>res.json({workouts:await service.list(req.user.id,req.query)})));
-router.put('/by-date/:date',asyncRoute(async(req,res)=>res.json({workout:await service.save(req.user.id,req.params.date,req.body)})));
-router.get('/:id',asyncRoute(async(req,res)=>res.json({workout:await service.get(req.user.id,req.params.id)})));
-router.patch('/:id/status',asyncRoute(async(req,res)=>res.json({workout:await service.status(req.user.id,req.params.id,req.body?.status)})));
-router.delete('/:id',asyncRoute(async(req,res)=>{await service.remove(req.user.id,req.params.id);res.sendStatus(204);}));
-module.exports=router;
+router.get(
+  '/',
+  asyncRoute(async (req, res) =>
+    res.json({ workouts: await service.list(req.user.id, req.query) }),
+  ),
+);
+router.put(
+  '/by-date/:date',
+  asyncRoute(async (req, res) =>
+    res.json({
+      workout: await service.save(req.user.id, req.params.date, req.body),
+    }),
+  ),
+);
+router.get(
+  '/:id',
+  asyncRoute(async (req, res) =>
+    res.json({ workout: await service.get(req.user.id, req.params.id) }),
+  ),
+);
+router.patch(
+  '/:id/status',
+  asyncRoute(async (req, res) =>
+    res.json({
+      workout: await service.status(
+        req.user.id,
+        req.params.id,
+        req.body?.status,
+      ),
+    }),
+  ),
+);
+router.delete(
+  '/:id',
+  asyncRoute(async (req, res) => {
+    await service.remove(req.user.id, req.params.id);
+    res.sendStatus(204);
+  }),
+);
+module.exports = router;

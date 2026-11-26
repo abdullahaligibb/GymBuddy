@@ -55,7 +55,7 @@ export function useTrainingData(api: AppApi, token: string, onExpired: (token: s
         catalog(), optional(api.getMacroTarget(token), null), optional(api.listMacroLogs(token), []),
       ]);
       const localIds = new Set(localExercises.map((exercise) => exercise.id));
-      const embedded = workouts.flatMap((day) => (day.exercises ?? []).flatMap((row) => row.catalogEntry && !localIds.has(row.catalogEntry.id) ? [row.catalogEntry] : []));
+      const embedded = [...workouts, ...plans].flatMap((item) => (item.exercises ?? []).flatMap((row) => row.catalogEntry && !localIds.has(row.catalogEntry.id) ? [row.catalogEntry] : []));
       setData({ workouts, plans, profile, exercises: mergeExerciseCatalogs(localExercises, embedded, exercises), macroTarget, macroLogs, notices: [...notices].sort() });
     } catch (failure) {
       report(failure);

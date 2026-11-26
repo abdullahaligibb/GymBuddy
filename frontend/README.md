@@ -19,7 +19,7 @@ Android-/iOS-Emulator gestartet werden. Für die Browser-Vorschau `npm run web` 
 - React Native + Expo + TypeScript
 - Mobile Dark-Mode Layout
 - Geschützte Tabs und Profilansicht mit Abmeldung
-- Registrierung und Login über die simulierte API
+- Registrierung und Login über Demo oder echten Server
 - Dashboard mit Wochenziel, Streak und Kurzstatistik
 - Horizontaler Wochenkalender mit Demo-Trainings
 - Übungsbibliothek mit Suche, kombinierten Filtern und Details
@@ -38,14 +38,14 @@ Die Datei `.env.example` enthält die öffentlichen Einstellungen. Für eine lok
 ```dotenv
 EXPO_PUBLIC_API_MODE=server
 EXPO_PUBLIC_API_URL=http://localhost:3000
-EXPO_PUBLIC_API_CONTRACT=legacy
+EXPO_PUBLIC_API_CONTRACT=v1
 ```
 
 Nach einer Konfigurationsänderung Expo neu starten. Auf einem Mobilgerät muss die Serveradresse den Entwicklungsrechner erreichen; dort bezeichnet `localhost` das Mobilgerät. In diese öffentlichen Variablen gehören keine Passwörter, JWT-Geheimnisse oder Datenbankzugänge.
 
-`legacy` passt zu den vorhandenen Express-Routen: Anmeldung, Registrierung, Kontoprüfung, Übungskatalog, Workouts lesen, Status ändern und löschen. Vollständiges Speichern, Profiländerungen, Pläne und Makrodaten werden ausdrücklich als noch nicht verfügbar gemeldet. Es werden keine unvollständigen Trainings durch mehrere Schreibaufrufe erzeugt. Bereits gespeicherte Übungen bleiben dank ihrer eingebetteten Metadaten auch bei einem ausgefallenen externen Katalog lesbar.
+`legacy` ist eine Kompatibilitätsoption für ältere Express-Server: Anmeldung, Registrierung, Kontoprüfung, Übungskatalog, Workouts lesen, Status ändern und löschen. Vollständiges Speichern, Profiländerungen, Pläne und Makrodaten werden ausdrücklich als noch nicht verfügbar gemeldet. Es werden keine unvollständigen Trainings durch mehrere Schreibaufrufe erzeugt. Bereits gespeicherte Übungen bleiben dank ihrer eingebetteten Metadaten auch bei einem ausgefallenen externen Katalog lesbar.
 
-`v1` aktiviert den vollständigen Frontend-Vertrag aus [api-contract.md](../docs/api-contract.md). Die dort als ausstehend markierten Server-Routen muss das Backend bereitstellen. Eine erfolgreich getestete HTTP-Testumgebung ist kein Nachweis für deren Umsetzung in der echten Datenbank.
+`v1` aktiviert den vollständigen Frontend-Vertrag aus [api-contract.md](../docs/api-contract.md). Die vollständigen Server-Routen sind implementiert und mit PostgreSQL sowie dem echten TypeScript-Client geprüft. Der Live-Browserlauf schliesst und öffnet den Browser und meldet sich neu an; Daten bleiben erhalten. Physische Geräte sind noch gesondert zu prüfen.
 
 Demo und verschiedene Serveradressen verwenden getrennte Sitzungsschlüssel. Ein verspäteter 401-Fehler einer bereits verlassenen Sitzung meldet ein neu angemeldetes Konto nicht ab. Bei ungültiger Serverkonfiguration zeigt die App einen Konfigurationsfehler.
 
@@ -79,3 +79,5 @@ Jedes Tagesprotokoll erfasst Protein, Kohlenhydrate und Fett in ganzen Gramm. Di
 ## Zusammenarbeit
 
 Die aktualisierte Aufteilung steht im [Projektplan](../docs/project-plan.md). Die frühere reine Offline-Planung wurde um das von Loris entwickelte Backend ergänzt. Die Zusammenführung der Datenflüsse ist noch offen.
+
+Der vollständige lokale Start mit Datenbank erfolgt vom Projektstamm über `npm run dev -- --host <WLAN-IPv4>`. Der Starter richtet öffentliche Frontend-Konfiguration und private Backend-Konfiguration getrennt ein.
